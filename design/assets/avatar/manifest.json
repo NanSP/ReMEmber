@@ -1,0 +1,426 @@
+[
+  {
+    "file": "00_avatar_exemplo_montado.svg",
+    "bytes": 2725
+  },
+  {
+    "file": "01_rosto_base.svg",
+    "bytes": 502
+  },
+  {
+    "file": "02_pele_amostra_01.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_02.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_03.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_04.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_05.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_06.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_07.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_08.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_09.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_10.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_11.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_12.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_13.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_14.svg",
+    "bytes": 281
+  },
+  {
+    "file": "02_pele_amostra_15.svg",
+    "bytes": 281
+  },
+  {
+    "file": "03_corpo_largo.svg",
+    "bytes": 890
+  },
+  {
+    "file": "03_corpo_magro.svg",
+    "bytes": 890
+  },
+  {
+    "file": "03_corpo_medio.svg",
+    "bytes": 890
+  },
+  {
+    "file": "04_olhos_cor_01.svg",
+    "bytes": 867
+  },
+  {
+    "file": "04_olhos_cor_02.svg",
+    "bytes": 867
+  },
+  {
+    "file": "04_olhos_cor_03.svg",
+    "bytes": 867
+  },
+  {
+    "file": "04_olhos_cor_04.svg",
+    "bytes": 867
+  },
+  {
+    "file": "04_olhos_cor_05.svg",
+    "bytes": 867
+  },
+  {
+    "file": "04_olhos_cor_06.svg",
+    "bytes": 867
+  },
+  {
+    "file": "04_olhos_cor_07.svg",
+    "bytes": 867
+  },
+  {
+    "file": "04_olhos_cor_08.svg",
+    "bytes": 867
+  },
+  {
+    "file": "04_olhos_cor_09.svg",
+    "bytes": 867
+  },
+  {
+    "file": "04_olhos_cor_10.svg",
+    "bytes": 867
+  },
+  {
+    "file": "04_olhos_cor_11.svg",
+    "bytes": 867
+  },
+  {
+    "file": "04_olhos_cor_12.svg",
+    "bytes": 867
+  },
+  {
+    "file": "05_expressao_bravo.svg",
+    "bytes": 461
+  },
+  {
+    "file": "05_expressao_chorando.svg",
+    "bytes": 472
+  },
+  {
+    "file": "05_expressao_feliz.svg",
+    "bytes": 424
+  },
+  {
+    "file": "05_expressao_neutro.svg",
+    "bytes": 328
+  },
+  {
+    "file": "05_expressao_piscando.svg",
+    "bytes": 461
+  },
+  {
+    "file": "05_expressao_rindo.svg",
+    "bytes": 466
+  },
+  {
+    "file": "05_expressao_sono.svg",
+    "bytes": 483
+  },
+  {
+    "file": "05_expressao_surpreso.svg",
+    "bytes": 292
+  },
+  {
+    "file": "05_expressao_triste.svg",
+    "bytes": 328
+  },
+  {
+    "file": "06_detalhe_barba.svg",
+    "bytes": 383
+  },
+  {
+    "file": "06_detalhe_blush.svg",
+    "bytes": 377
+  },
+  {
+    "file": "06_detalhe_cicatriz.svg",
+    "bytes": 409
+  },
+  {
+    "file": "06_detalhe_pinta.svg",
+    "bytes": 279
+  },
+  {
+    "file": "06_detalhe_rugas.svg",
+    "bytes": 374
+  },
+  {
+    "file": "06_detalhe_sardas.svg",
+    "bytes": 690
+  },
+  {
+    "file": "07_cabelo_cacheado.svg",
+    "bytes": 1032
+  },
+  {
+    "file": "07_cabelo_coque.svg",
+    "bytes": 452
+  },
+  {
+    "file": "07_cabelo_curto_espetado.svg",
+    "bytes": 474
+  },
+  {
+    "file": "07_cabelo_dreads.svg",
+    "bytes": 934
+  },
+  {
+    "file": "07_cabelo_franja.svg",
+    "bytes": 418
+  },
+  {
+    "file": "07_cabelo_liso_lateral.svg",
+    "bytes": 398
+  },
+  {
+    "file": "07_cabelo_longo.svg",
+    "bytes": 435
+  },
+  {
+    "file": "07_cabelo_ondulado.svg",
+    "bytes": 455
+  },
+  {
+    "file": "07_cabelo_raspado.svg",
+    "bytes": 393
+  },
+  {
+    "file": "07_cabelo_trancas.svg",
+    "bytes": 935
+  },
+  {
+    "file": "08_cor_cabelo_01.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_02.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_03.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_04.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_05.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_06.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_07.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_08.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_09.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_10.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_11.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_12.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_13.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_14.svg",
+    "bytes": 285
+  },
+  {
+    "file": "08_cor_cabelo_15.svg",
+    "bytes": 285
+  },
+  {
+    "file": "09_oculos_gatinho.svg",
+    "bytes": 675
+  },
+  {
+    "file": "09_oculos_quadrado.svg",
+    "bytes": 560
+  },
+  {
+    "file": "09_oculos_redondo.svg",
+    "bytes": 539
+  },
+  {
+    "file": "10_chapeu_bone.svg",
+    "bytes": 489
+  },
+  {
+    "file": "10_chapeu_gorro.svg",
+    "bytes": 442
+  },
+  {
+    "file": "10_chapeu_palha.svg",
+    "bytes": 611
+  },
+  {
+    "file": "11_cachecol_bege.svg",
+    "bytes": 503
+  },
+  {
+    "file": "11_cachecol_verde.svg",
+    "bytes": 504
+  },
+  {
+    "file": "11_cachecol_vermelho.svg",
+    "bytes": 507
+  },
+  {
+    "file": "12_brincos_argola.svg",
+    "bytes": 373
+  },
+  {
+    "file": "12_brincos_losango.svg",
+    "bytes": 484
+  },
+  {
+    "file": "12_brincos_ponto.svg",
+    "bytes": 356
+  },
+  {
+    "file": "13_roupa_camisa_listrada.svg",
+    "bytes": 691
+  },
+  {
+    "file": "13_roupa_camiseta.svg",
+    "bytes": 567
+  },
+  {
+    "file": "13_roupa_jaqueta.svg",
+    "bytes": 572
+  },
+  {
+    "file": "13_roupa_moletom.svg",
+    "bytes": 589
+  },
+  {
+    "file": "13_roupa_polo.svg",
+    "bytes": 572
+  },
+  {
+    "file": "13_roupa_social.svg",
+    "bytes": 817
+  },
+  {
+    "file": "14_calca_bege.svg",
+    "bytes": 525
+  },
+  {
+    "file": "14_calca_jeans.svg",
+    "bytes": 526
+  },
+  {
+    "file": "14_calca_moletom.svg",
+    "bytes": 528
+  },
+  {
+    "file": "15_calcado_bota.svg",
+    "bytes": 512
+  },
+  {
+    "file": "15_calcado_esportivo.svg",
+    "bytes": 689
+  },
+  {
+    "file": "15_calcado_sandalia.svg",
+    "bytes": 516
+  },
+  {
+    "file": "15_calcado_social.svg",
+    "bytes": 514
+  },
+  {
+    "file": "15_calcado_tenis.svg",
+    "bytes": 685
+  },
+  {
+    "file": "16_relogio_analogico.svg",
+    "bytes": 480
+  },
+  {
+    "file": "16_relogio_digital.svg",
+    "bytes": 497
+  },
+  {
+    "file": "17_bruxa_chapeu.svg",
+    "bytes": 610
+  },
+  {
+    "file": "17_bruxa_vassoura.svg",
+    "bytes": 445
+  },
+  {
+    "file": "17_bruxa_vestido.svg",
+    "bytes": 510
+  },
+  {
+    "file": "18_punk_guitarra.svg",
+    "bytes": 502
+  },
+  {
+    "file": "18_punk_jaqueta.svg",
+    "bytes": 899
+  },
+  {
+    "file": "18_punk_moicano.svg",
+    "bytes": 401
+  }
+]
