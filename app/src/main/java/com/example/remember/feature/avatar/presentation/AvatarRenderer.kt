@@ -23,7 +23,7 @@ fun AvatarRenderer(
     Box(modifier = modifier) {
         layers.forEachIndexed { index, item ->
             AsyncImage(
-                model = AssetLocation.uri(item.assetPath),
+                model = AssetLocation.uri(AvatarCatalog.assetPathFor(item, configuration)),
                 contentDescription = if (index == layers.lastIndex) {
                     contentDescription
                 } else {

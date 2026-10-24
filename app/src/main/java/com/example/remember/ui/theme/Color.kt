@@ -2,10 +2,14 @@ package com.example.remember.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
-
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val Forest = Color(0xFF174C3C)
+val ForestLight = Color(0xFF9ED8C1)
+val Tangerine = Color(0xFFF2733B)
+val TangerineLight = Color(0xFFFFB693)
+val Cream = Color(0xFFFFF8EB)
+val Ink = Color(0xFF19231F)
+val Moss = Color(0xFF4D665B)
+val MintSurface = Color(0xFFE3F2EA)
+val Night = Color(0xFF0E1D18)
+val NightSurface = Color(0xFF172A23)
+val NightInk = Color(0xFFE6F2EC)
