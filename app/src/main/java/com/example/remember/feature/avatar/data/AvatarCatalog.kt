@@ -1,5 +1,6 @@
 package com.example.remember.feature.avatar.data
 
+import com.example.remember.feature.avatar.domain.model.AvatarBodyType
 import com.example.remember.feature.avatar.domain.model.AvatarConfiguration
 import com.example.remember.feature.avatar.domain.model.AvatarItem
 import com.example.remember.feature.avatar.domain.model.AvatarSlot
@@ -24,6 +25,16 @@ object AvatarCatalog {
     )
 
     val items = listOf(
+        AvatarItem(
+            id = "body_slim",
+            slot = AvatarSlot.BODY,
+            assetPath = "avatar/corpo/03_corpo_magro.svg"
+        ),
+        AvatarItem(
+            id = "body_wide",
+            slot = AvatarSlot.BODY,
+            assetPath = "avatar/corpo/03_corpo_largo.svg"
+        ),
         AvatarItem(
             id = "body_medium",
             slot = AvatarSlot.BODY,
@@ -71,6 +82,31 @@ object AvatarCatalog {
             slot = AvatarSlot.HAIR,
             assetPath = "avatar/cabelos/07_cabelo_cacheado.svg",
             unlockedByDefault = true
+        ),
+        AvatarItem(
+            id = "hair_bangs",
+            slot = AvatarSlot.HAIR,
+            assetPath = "avatar/cabelos/07_cabelo_franja.svg"
+        ),
+        AvatarItem(
+            id = "hair_long",
+            slot = AvatarSlot.HAIR,
+            assetPath = "avatar/cabelos/07_cabelo_longo.svg"
+        ),
+        AvatarItem(
+            id = "top_hoodie",
+            slot = AvatarSlot.TOP,
+            assetPath = "avatar/roupa/13_roupa_moletom.svg"
+        ),
+        AvatarItem(
+            id = "top_jacket",
+            slot = AvatarSlot.TOP,
+            assetPath = "avatar/roupa/13_roupa_jaqueta.svg"
+        ),
+        AvatarItem(
+            id = "glasses_round",
+            slot = AvatarSlot.GLASSES,
+            assetPath = "avatar/oculos/09_oculos_redondo.svg"
         )
     )
 
@@ -86,4 +122,19 @@ object AvatarCatalog {
             configuration.equippedItemIds[slot]?.let(byId::get)
         }
     }
+
+    fun assetPathFor(item: AvatarItem, configuration: AvatarConfiguration): String {
+        if (item.slot != AvatarSlot.TOP || item.id !in tailoredTopIds) return item.assetPath
+        val bodyId = configuration.equippedItemIds[AvatarSlot.BODY]
+        val folder = AvatarBodyType.fromItemId(bodyId).tailoredTopFolder
+            ?: return item.assetPath
+        val baseName = item.assetPath.substringAfterLast('/').substringBeforeLast(".svg")
+        return "avatar/roupa/$folder/${baseName}_alinhada.svg"
+    }
+
+    private val tailoredTopIds = setOf(
+        "top_tshirt",
+        "top_hoodie",
+        "top_jacket"
+    )
 }
