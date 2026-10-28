@@ -2,6 +2,7 @@ package com.example.remember.feature.mvp.presentation
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,9 +56,11 @@ import com.example.remember.feature.goals.domain.model.GoalCategory
 import com.example.remember.feature.mvp.data.MvpRepository.AvatarSelection
 import com.example.remember.feature.mvp.domain.MvpGoal
 import com.example.remember.feature.mvp.domain.MvpState
+import com.example.remember.ui.components.neomorphicTextFieldColors
+import com.example.remember.ui.theme.NeoButton
 
 enum class MvpPage(val isRoot: Boolean = false) {
-    TODAY(true), GOALS(true), AVATAR(true), MORE(true), PROFILE, STORE, SETTINGS
+    TODAY(true), GOALS(true), AVATAR(true), MORE(true), PROFILE, STORE(true), SETTINGS
 }
 
 @Composable
@@ -118,6 +122,7 @@ fun OnboardingScreen(
             singleLine = true,
             label = { Text(stringResource(R.string.name_placeholder)) },
             isError = showError,
+            colors = neomorphicTextFieldColors(),
             supportingText = {
                 if (showError) Text(stringResource(R.string.name_required))
             }
@@ -320,7 +325,8 @@ fun GoalsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text(stringResource(R.string.goal_title)) },
                         placeholder = { Text(stringResource(R.string.goal_placeholder)) },
-                        singleLine = true
+                        singleLine = true,
+                        colors = neomorphicTextFieldColors()
                     )
                     Text(stringResource(R.string.category), fontWeight = FontWeight.Bold)
                     CategorySelector(category, onSelect = { category = it })
@@ -423,7 +429,6 @@ fun MoreScreen(contentPadding: PaddingValues, onNavigate: (MvpPage) -> Unit) {
     ) {
         item { ScreenHeading(R.string.more_title, R.string.more_description) }
         item { MoreCard(R.string.profile, R.string.profile_description) { onNavigate(MvpPage.PROFILE) } }
-        item { MoreCard(R.string.store, R.string.store_description) { onNavigate(MvpPage.STORE) } }
         item { MoreCard(R.string.settings, R.string.settings_description) { onNavigate(MvpPage.SETTINGS) } }
     }
 }
@@ -502,9 +507,17 @@ private fun StoreItem(@StringRes name: Int, price: String) {
         Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(stringResource(name), fontWeight = FontWeight.Bold)
-                Text("$price ${stringResource(R.string.coins).lowercase()}", color = MaterialTheme.colorScheme.secondary)
+                Text(
+                    "$price ${stringResource(R.string.coins).lowercase()}",
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
-            OutlinedButton(onClick = {}, enabled = false) { Text(stringResource(R.string.coming_soon)) }
+            OutlinedButton(
+                onClick = {},
+                enabled = false,
+                colors = ButtonDefaults.outlinedButtonColors(disabledContentColor = NeoButton),
+                border = BorderStroke(1.dp, NeoButton)
+            ) { Text(stringResource(R.string.coming_soon)) }
         }
     }
 }

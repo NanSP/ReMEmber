@@ -55,6 +55,12 @@ class MvpRepository(private val context: Context) {
         }
     }
 
+    suspend fun setPrimaryCategory(category: GoalCategory) {
+        context.mvpDataStore.edit { preferences ->
+            preferences[Keys.PRIMARY_CATEGORY] = category.name
+        }
+    }
+
     suspend fun completeGoal(goalId: Long) {
         context.mvpDataStore.edit { preferences ->
             val goals = decodeGoals(preferences[Keys.GOALS])
