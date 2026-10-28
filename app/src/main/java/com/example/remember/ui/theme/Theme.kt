@@ -1,42 +1,51 @@
 package com.example.remember.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = ForestLight,
-    onPrimary = Night,
-    secondary = TangerineLight,
-    background = Night,
-    onBackground = NightInk,
-    surface = NightSurface,
-    onSurface = NightInk
-)
-
 private val LightColorScheme = lightColorScheme(
-    primary = Forest,
-    onPrimary = Cream,
-    secondary = Tangerine,
-    onSecondary = Cream,
-    background = Cream,
-    onBackground = Ink,
-    surface = Color.White,
-    onSurface = Ink,
-    surfaceVariant = MintSurface,
-    onSurfaceVariant = Moss
+    primary = NeoButton,
+    onPrimary = Color.White,
+    primaryContainer = NeoElement,
+    onPrimaryContainer = NeoText,
+    secondary = NeoElement,
+    onSecondary = NeoText,
+    secondaryContainer = NeoElement,
+    onSecondaryContainer = NeoText,
+    tertiary = NeoButton,
+    onTertiary = Color.White,
+    tertiaryContainer = NeoElement,
+    onTertiaryContainer = NeoText,
+    background = NeoBackground,
+    onBackground = NeoText,
+    surface = NeoBackground,
+    onSurface = NeoText,
+    surfaceVariant = NeoElement,
+    onSurfaceVariant = NeoText,
+    surfaceTint = Color.Transparent,
+    inverseSurface = NeoButton,
+    inverseOnSurface = Color.White,
+    inversePrimary = NeoElement,
+    outline = NeoButton,
+    outlineVariant = NeoElement,
+    scrim = NeoText,
+    surfaceBright = NeoBackground,
+    surfaceDim = NeoElement,
+    surfaceContainer = NeoBackground,
+    surfaceContainerLow = NeoBackground,
+    surfaceContainerLowest = NeoBackground,
+    surfaceContainerHigh = NeoElement,
+    surfaceContainerHighest = NeoElement
 )
 
 @Composable
 fun ReMEmberTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+        colorScheme = LightColorScheme,
         typography = Typography,
         content = content
     )

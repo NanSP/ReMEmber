@@ -22,13 +22,13 @@ import com.example.remember.feature.mvp.presentation.AvatarScreen
 import com.example.remember.feature.mvp.presentation.GoalsScreen
 import com.example.remember.feature.mvp.presentation.LoadingScreen
 import com.example.remember.feature.mvp.presentation.MoreScreen
-import com.example.remember.feature.mvp.presentation.MvpBottomBar
+import com.example.remember.feature.mvp.presentation.NeoBottomBar
+import com.example.remember.feature.mvp.presentation.NeoTodayScreen
 import com.example.remember.feature.mvp.presentation.MvpPage
 import com.example.remember.feature.mvp.presentation.OnboardingScreen
 import com.example.remember.feature.mvp.presentation.ProfileScreen
 import com.example.remember.feature.mvp.presentation.SettingsScreen
 import com.example.remember.feature.mvp.presentation.StoreScreen
-import com.example.remember.feature.mvp.presentation.TodayScreen
 import kotlinx.coroutines.launch
 
 @Composable
@@ -76,15 +76,18 @@ fun RememberMeApp() {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            if (page.isRoot) MvpBottomBar(page = page, onNavigate = { page = it })
+            if (page.isRoot) NeoBottomBar(page = page, onNavigate = { page = it })
         }
     ) { contentPadding ->
         when (page) {
-            MvpPage.TODAY -> TodayScreen(
+            MvpPage.TODAY -> NeoTodayScreen(
                 state = currentState,
                 avatarConfiguration = avatarConfiguration,
                 contentPadding = contentPadding,
                 onCreateGoal = { page = MvpPage.GOALS },
+                onSelectPrimaryCategory = { category ->
+                    scope.launch { repository.setPrimaryCategory(category) }
+                },
                 onCompleteGoal = { goalId ->
                     scope.launch {
                         repository.completeGoal(goalId)
