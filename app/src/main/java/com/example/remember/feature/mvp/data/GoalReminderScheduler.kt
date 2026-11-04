@@ -12,10 +12,15 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
-internal class GoalReminderScheduler(private val context: Context) {
+internal interface ReminderScheduler {
+    fun sync(goal: MvpGoal)
+    fun cancel(goalId: Long)
+}
+
+internal class GoalReminderScheduler(private val context: Context) : ReminderScheduler {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
 
-    fun sync(goal: MvpGoal) {
+    override fun sync(goal: MvpGoal) {
         cancel(goal.id)
         if (!goal.reminderEnabled || goal.reminderMinutesOfDay == null) return
         if (goal.recurrence == GoalRecurrence.NONE && goal.isCompleted) return
@@ -44,7 +49,7 @@ internal class GoalReminderScheduler(private val context: Context) {
         scheduleAt(goal, next)
     }
 
-    fun cancel(goalId: Long) {
+    override fun cancel(goalId: Long) {
         alarmManager.cancel(pendingIntent(goalId, PendingIntent.FLAG_NO_CREATE))
     }
 

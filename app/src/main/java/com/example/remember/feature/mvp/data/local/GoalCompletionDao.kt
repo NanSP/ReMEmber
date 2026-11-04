@@ -16,6 +16,9 @@ interface GoalCompletionDao {
     @Query("SELECT * FROM goal_completions WHERE goalId = :goalId ORDER BY completedAtMillis DESC")
     suspend fun getForGoal(goalId: Long): List<GoalCompletionEntity>
 
+    @Query("SELECT * FROM goal_completions WHERE goalId = :goalId AND completedEpochDay = :epochDay LIMIT 1")
+    suspend fun find(goalId: Long, epochDay: Long): GoalCompletionEntity?
+
     @Query("SELECT COUNT(*) FROM goal_completions")
     suspend fun count(): Int
 }

@@ -3,6 +3,7 @@ package com.example.remember.feature.mvp.data
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -38,6 +39,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 private val Context.mvpDataStore by preferencesDataStore(name = "remember_mvp")
 
@@ -54,22 +57,25 @@ data class ReminderSnapshot(
     val vibrationEnabled: Boolean
 )
 
-class MvpRepository(
+class MvpRepository internal constructor(
     private val context: Context,
     private val currentEpochDay: () -> Long = DeviceDayProvider::currentEpochDay,
-    private val currentLocalHour: () -> Int = DeviceDayProvider::currentLocalHour
+    private val currentLocalHour: () -> Int = DeviceDayProvider::currentLocalHour,
+    private val database: RememberDatabase = RememberDatabase.getInstance(context),
+    private val dataStore: DataStore<Preferences> = context.mvpDataStore,
+    private val reminderScheduler: ReminderScheduler = GoalReminderScheduler(context),
+    private val onCompletionStored: suspend () -> Unit = {}
 ) {
-    private val reminderScheduler = GoalReminderScheduler(context)
-    private val database = RememberDatabase.getInstance(context)
     private val goalDao = database.goalDao()
     private val completionDao = database.goalCompletionDao()
-    private val preferences = context.mvpDataStore.data.catch { error ->
+    private val preferences = dataStore.data.catch { error ->
         if (error is IOException) emit(androidx.datastore.preferences.core.emptyPreferences())
         else throw error
     }
 
     val state: Flow<MvpState> = flow {
         migrateLegacyGoalsIfNeeded()
+        reconcilePendingCompletions()
         emitAll(
             combine(
                 preferences,
@@ -90,7 +96,7 @@ class MvpRepository(
         primaryCategory: GoalCategory,
         bodyItemId: String
     ) {
-        context.mvpDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[Keys.PROFILE_NAME] = name.trim()
             preferences[Keys.PRIMARY_CATEGORY] = primaryCategory.name
             preferences[Keys.SELECTED_BODY] = bodyItemId
@@ -147,7 +153,7 @@ class MvpRepository(
 
     suspend fun setPrimaryCategory(category: GoalCategory): PrimaryCategoryChangeResult {
         var result = PrimaryCategoryChangeResult(PrimaryCategoryChangeStatus.ALREADY_SELECTED)
-        context.mvpDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             val currentCategory = preferences.category(Keys.PRIMARY_CATEGORY)
             if (currentCategory == category) return@edit
             val today = currentEpochDay()
@@ -176,125 +182,32 @@ class MvpRepository(
     }
 
     suspend fun completeGoal(goalId: Long) {
-        val today = currentEpochDay()
-        val entity = goalDao.getById(goalId) ?: return
-        val goal = entity.toDomain() ?: return
-        if (goal.isCompletedAt(today)) return
+        completionMutex.withLock {
+            reconcilePendingCompletionsLocked()
+            val today = currentEpochDay()
+            val goal = goalDao.getById(goalId)?.toDomain() ?: return@withLock
+            if (goal.isCompletedAt(today)) return@withLock
 
-        val storedPreferences = preferences.first()
-        val storedHistories = decodeCategoryHistories(storedPreferences)
-        val storedPrimaryCategory = storedPreferences.category(Keys.PRIMARY_CATEGORY)
-        val storedPrimaryHistory = storedHistories.getValue(storedPrimaryCategory)
-        val storedFirstPrimaryCompletion = RewardRules.isFirstPrimaryCompletionToday(
-            category = goal.category,
-            primaryCategory = storedPrimaryCategory,
-            lastPrimaryCompletionDay = storedPrimaryHistory.lastPrimaryCompletionDay,
-            currentDay = today
-        )
-        val storedReward = RewardRules.completionReward(
-            category = goal.category,
-            primaryCategory = storedPrimaryCategory,
-            isFirstPrimaryCompletionToday = storedFirstPrimaryCompletion
-        )
-        var recordedExperience = storedReward.experience
-        var recordedCoins = storedReward.coins
-        if (storedFirstPrimaryCompletion) {
-            val nextStreak = RewardRules.nextStreak(
-                current = storedPrimaryHistory.currentStreak,
-                lastCompletionDay = storedPrimaryHistory.lastPrimaryCompletionDay,
-                currentDay = today
-            )
-            val seasonReward = RewardRules.seasonReward(
-                previousLongestStreak = storedPrimaryHistory.longestStreak,
-                newLongestStreak = maxOf(storedPrimaryHistory.longestStreak, nextStreak)
-            )
-            recordedExperience += seasonReward.experience
-            recordedCoins += seasonReward.coins
-        }
-        val completedGoal = goal.copy(isCompleted = true, lastCompletedEpochDay = today)
-        val committed = database.withTransaction {
-            val liveEntity = goalDao.getById(goalId) ?: return@withTransaction false
-            val liveGoal = liveEntity.toDomain() ?: return@withTransaction false
-            if (liveGoal.isCompletedAt(today)) return@withTransaction false
-            goalDao.update(completedGoal.toEntity(liveEntity.createdAtMillis))
-            completionDao.insert(
-                GoalCompletionEntity(
-                    goalId = goal.id,
-                    goalTitle = goal.title,
-                    category = goal.category.name,
-                    completedEpochDay = today,
-                    completedAtMillis = System.currentTimeMillis(),
-                    experienceEarned = recordedExperience,
-                    coinsEarned = recordedCoins
-                )
-            )
-            true
-        }
-        if (!committed) return
-
-        context.mvpDataStore.edit { preferences ->
-            val primaryCategory = preferences.category(Keys.PRIMARY_CATEGORY)
-            val histories = decodeCategoryHistories(preferences).toMutableMap()
-            val primaryHistory = histories.getValue(primaryCategory)
-            val lastPrimaryCompletionDay = primaryHistory.lastPrimaryCompletionDay
-            val isFirstPrimaryCompletionToday = RewardRules.isFirstPrimaryCompletionToday(
-                category = goal.category,
-                primaryCategory = primaryCategory,
-                lastPrimaryCompletionDay = lastPrimaryCompletionDay,
-                currentDay = today
-            )
-            val reward = RewardRules.completionReward(
-                category = goal.category,
-                primaryCategory = primaryCategory,
-                isFirstPrimaryCompletionToday = isFirstPrimaryCompletionToday
-            )
-            val previousLongestStreak = primaryHistory.longestStreak
-            var experienceEarned = reward.experience
-            var coinsEarned = reward.coins
-            var updatedHistory = histories.getValue(goal.category).let { history ->
-                history.copy(totalCompletions = history.totalCompletions + 1)
+            val event = preparePendingCompletion(goal, preferences.first(), today)
+            dataStore.edit { stored ->
+                val pending = PendingCompletionCodec.decode(stored[Keys.PENDING_COMPLETIONS])
+                if (pending.none { it.eventId == event.eventId }) {
+                    stored[Keys.PENDING_COMPLETIONS] = PendingCompletionCodec.encode(pending + event)
+                }
             }
-
-            preferences[Keys.TOTAL_COMPLETIONS] = (preferences[Keys.TOTAL_COMPLETIONS] ?: 0) + 1
-            if (isFirstPrimaryCompletionToday) {
-                val nextStreak = RewardRules.nextStreak(
-                    current = primaryHistory.currentStreak,
-                    lastCompletionDay = lastPrimaryCompletionDay,
-                    currentDay = today
-                )
-                val newLongestStreak = maxOf(previousLongestStreak, nextStreak)
-                val seasonReward = RewardRules.seasonReward(
-                    previousLongestStreak = previousLongestStreak,
-                    newLongestStreak = newLongestStreak
-                )
-                experienceEarned += seasonReward.experience
-                coinsEarned += seasonReward.coins
-                updatedHistory = updatedHistory.copy(
-                    currentStreak = nextStreak,
-                    longestStreak = newLongestStreak,
-                    lastPrimaryCompletionDay = today
-                )
-                preferences[Keys.CURRENT_STREAK] = nextStreak
-                preferences[Keys.LONGEST_STREAK] = newLongestStreak
-                preferences[Keys.LAST_PRIMARY_COMPLETION_DAY] = today
+            if (!storeCompletion(event)) {
+                removePendingCompletion(event.eventId)
+                return@withLock
             }
-            histories[goal.category] = updatedHistory
-            preferences[Keys.CATEGORY_HISTORY] = encodeCategoryHistories(histories)
-            preferences[Keys.EXPERIENCE] =
-                (preferences[Keys.EXPERIENCE] ?: 0) + experienceEarned
-            preferences[Keys.COINS] = (preferences[Keys.COINS] ?: 0) + coinsEarned
-            preferences[Keys.TOTAL_COINS_EARNED] =
-                (preferences[Keys.TOTAL_COINS_EARNED]
-                    ?: ((preferences[Keys.COINS] ?: 0) - coinsEarned).coerceAtLeast(0)) + coinsEarned
-            recordCompletionStats(preferences, today, currentLocalHour())
-            grantNewAchievements(preferences, histories)
+            onCompletionStored()
+            applyPendingCompletion(event)
+            goalDao.getById(goalId)?.toDomain()?.let(reminderScheduler::sync)
         }
-        reminderScheduler.sync(completedGoal)
     }
 
     suspend fun completeBonusMission(): Boolean {
         var completed = false
-        context.mvpDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             val today = currentEpochDay()
             if (preferences[Keys.LAST_BONUS_MISSION_DAY] == today) return@edit
             preferences[Keys.LAST_BONUS_MISSION_DAY] = today
@@ -316,7 +229,7 @@ class MvpRepository(
 
     suspend fun recoverStreak(): Boolean {
         var recovered = false
-        context.mvpDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             val today = currentEpochDay()
             val month = DeviceDayProvider.monthKey(today)
             val used = if (preferences[Keys.RECOVERY_MONTH] == month) {
@@ -354,7 +267,7 @@ class MvpRepository(
     suspend fun purchaseBundle(bundleId: String): StorePurchaseResult {
         val bundle = StoreCatalog.find(bundleId) ?: return StorePurchaseResult.UNKNOWN_BUNDLE
         var result = StorePurchaseResult.UNKNOWN_BUNDLE
-        context.mvpDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             val owned = decodeIdSet(preferences[Keys.OWNED_BUNDLES])
             val coins = preferences[Keys.COINS] ?: 0
             result = when {
@@ -374,7 +287,7 @@ class MvpRepository(
     suspend fun equipBundle(bundleId: String): Boolean {
         val bundle = StoreCatalog.find(bundleId) ?: return false
         var equipped = false
-        context.mvpDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             if (bundle.id !in decodeIdSet(preferences[Keys.OWNED_BUNDLES])) return@edit
             bundle.equippedItemIds[AvatarSlot.HAIR]?.let { preferences[Keys.SELECTED_HAIR] = it }
             bundle.equippedItemIds[AvatarSlot.GLASSES]?.let { preferences[Keys.SELECTED_GLASSES] = it }
@@ -391,7 +304,7 @@ class MvpRepository(
 
     suspend fun beginStorePurchaseTest() {
         if (!context.isDebuggable()) return
-        context.mvpDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             if (preferences[Keys.DEBUG_STORE_TEST_ACTIVE] == true) return@edit
             preferences[Keys.DEBUG_STORE_TEST_ACTIVE] = true
             preferences[Keys.DEBUG_ORIGINAL_COINS] = preferences[Keys.COINS] ?: 0
@@ -411,7 +324,7 @@ class MvpRepository(
 
     suspend fun finishStorePurchaseTest() {
         if (!context.isDebuggable()) return
-        context.mvpDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             if (preferences[Keys.DEBUG_STORE_TEST_ACTIVE] != true) return@edit
             preferences[Keys.COINS] = preferences[Keys.DEBUG_ORIGINAL_COINS] ?: 0
             preferences[Keys.OWNED_BUNDLES] = preferences[Keys.DEBUG_ORIGINAL_OWNED_BUNDLES].orEmpty()
@@ -438,7 +351,7 @@ class MvpRepository(
     }
 
     suspend fun selectAvatarItem(slot: AvatarSelection, itemId: String) {
-        context.mvpDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             val avatarSlot = slot.toAvatarSlot()
             val ownedBundles = decodeIdSet(preferences[Keys.OWNED_BUNDLES])
             if (!AvatarCatalog.contains(avatarSlot, itemId)) return@edit
@@ -458,7 +371,7 @@ class MvpRepository(
 
     suspend fun selectAvatarColor(target: AvatarColorSelection, color: String) {
         if (!HEX_COLOR.matches(color)) return
-        context.mvpDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[when (target) {
                 AvatarColorSelection.SKIN -> Keys.AVATAR_SKIN_COLOR
                 AvatarColorSelection.HAIR -> Keys.AVATAR_HAIR_COLOR
@@ -472,11 +385,11 @@ class MvpRepository(
     }
 
     suspend fun setSoundEnabled(enabled: Boolean) {
-        context.mvpDataStore.edit { it[Keys.SOUND_ENABLED] = enabled }
+        dataStore.edit { it[Keys.SOUND_ENABLED] = enabled }
     }
 
     suspend fun setVibrationEnabled(enabled: Boolean) {
-        context.mvpDataStore.edit { it[Keys.VIBRATION_ENABLED] = enabled }
+        dataStore.edit { it[Keys.VIBRATION_ENABLED] = enabled }
     }
 
     suspend fun rescheduleReminders() {
@@ -486,7 +399,7 @@ class MvpRepository(
 
     suspend fun reminderSnapshot(goalId: Long): ReminderSnapshot? {
         migrateLegacyGoalsIfNeeded()
-        val preferences = context.mvpDataStore.data.first()
+        val preferences = dataStore.data.first()
         val goal = goalDao.getById(goalId)?.toDomain()
             ?.takeIf { it.reminderEnabled }
             ?: return null
@@ -525,12 +438,154 @@ class MvpRepository(
                 }.forEach { completionDao.insert(it) }
             }
         }
-        context.mvpDataStore.edit { mutablePreferences ->
+        dataStore.edit { mutablePreferences ->
             if (mutablePreferences[Keys.CATEGORY_HISTORY] == null) {
                 mutablePreferences[Keys.CATEGORY_HISTORY] = encodeCategoryHistories(legacyHistories)
             }
             mutablePreferences[Keys.ROOM_GOALS_MIGRATED] = true
             mutablePreferences.remove(Keys.GOALS)
+        }
+    }
+
+    private suspend fun reconcilePendingCompletions() {
+        completionMutex.withLock { reconcilePendingCompletionsLocked() }
+    }
+
+    private suspend fun reconcilePendingCompletionsLocked() {
+        PendingCompletionCodec.decode(preferences.first()[Keys.PENDING_COMPLETIONS])
+            .forEach { event ->
+                if (storeCompletion(event)) {
+                    applyPendingCompletion(event)
+                    goalDao.getById(event.goalId)?.toDomain()?.let(reminderScheduler::sync)
+                } else {
+                    removePendingCompletion(event.eventId)
+                }
+            }
+    }
+
+    private fun preparePendingCompletion(
+        goal: MvpGoal,
+        storedPreferences: Preferences,
+        completedEpochDay: Long
+    ): PendingCompletion {
+        val histories = decodeCategoryHistories(storedPreferences)
+        val primaryCategory = storedPreferences.category(Keys.PRIMARY_CATEGORY)
+        val primaryHistory = histories.getValue(primaryCategory)
+        val advancesPrimaryStreak = RewardRules.isFirstPrimaryCompletionToday(
+            category = goal.category,
+            primaryCategory = primaryCategory,
+            lastPrimaryCompletionDay = primaryHistory.lastPrimaryCompletionDay,
+            currentDay = completedEpochDay
+        )
+        val reward = RewardRules.completionReward(
+            category = goal.category,
+            primaryCategory = primaryCategory,
+            isFirstPrimaryCompletionToday = advancesPrimaryStreak
+        )
+        var experienceEarned = reward.experience
+        var coinsEarned = reward.coins
+        if (advancesPrimaryStreak) {
+            val nextStreak = RewardRules.nextStreak(
+                current = primaryHistory.currentStreak,
+                lastCompletionDay = primaryHistory.lastPrimaryCompletionDay,
+                currentDay = completedEpochDay
+            )
+            val seasonReward = RewardRules.seasonReward(
+                previousLongestStreak = primaryHistory.longestStreak,
+                newLongestStreak = maxOf(primaryHistory.longestStreak, nextStreak)
+            )
+            experienceEarned += seasonReward.experience
+            coinsEarned += seasonReward.coins
+        }
+        return PendingCompletion(
+            eventId = "${goal.id}:$completedEpochDay",
+            goalId = goal.id,
+            goalTitle = goal.title,
+            category = goal.category,
+            completedEpochDay = completedEpochDay,
+            completedAtMillis = System.currentTimeMillis(),
+            experienceEarned = experienceEarned,
+            coinsEarned = coinsEarned,
+            advancesPrimaryStreak = advancesPrimaryStreak,
+            localHour = currentLocalHour()
+        )
+    }
+
+    private suspend fun storeCompletion(event: PendingCompletion): Boolean =
+        database.withTransaction {
+            if (completionDao.find(event.goalId, event.completedEpochDay) != null) {
+                return@withTransaction true
+            }
+            val liveEntity = goalDao.getById(event.goalId) ?: return@withTransaction false
+            val liveGoal = liveEntity.toDomain() ?: return@withTransaction false
+            val completedGoal = liveGoal.copy(
+                isCompleted = true,
+                lastCompletedEpochDay = event.completedEpochDay
+            )
+            goalDao.update(completedGoal.toEntity(liveEntity.createdAtMillis))
+            completionDao.insert(
+                GoalCompletionEntity(
+                    goalId = event.goalId,
+                    goalTitle = event.goalTitle,
+                    category = event.category.name,
+                    completedEpochDay = event.completedEpochDay,
+                    completedAtMillis = event.completedAtMillis,
+                    experienceEarned = event.experienceEarned,
+                    coinsEarned = event.coinsEarned
+                )
+            )
+            true
+        }
+
+    private suspend fun applyPendingCompletion(event: PendingCompletion) {
+        dataStore.edit { stored ->
+            val pending = PendingCompletionCodec.decode(stored[Keys.PENDING_COMPLETIONS])
+            if (pending.none { it.eventId == event.eventId }) return@edit
+
+            val histories = decodeCategoryHistories(stored).toMutableMap()
+            var updatedHistory = histories.getValue(event.category).let { history ->
+                history.copy(totalCompletions = history.totalCompletions + 1)
+            }
+            if (event.advancesPrimaryStreak) {
+                val nextStreak = RewardRules.nextStreak(
+                    current = updatedHistory.currentStreak,
+                    lastCompletionDay = updatedHistory.lastPrimaryCompletionDay,
+                    currentDay = event.completedEpochDay
+                )
+                updatedHistory = updatedHistory.copy(
+                    currentStreak = nextStreak,
+                    longestStreak = maxOf(updatedHistory.longestStreak, nextStreak),
+                    lastPrimaryCompletionDay = event.completedEpochDay
+                )
+                if (stored.category(Keys.PRIMARY_CATEGORY) == event.category) {
+                    stored[Keys.CURRENT_STREAK] = updatedHistory.currentStreak
+                    stored[Keys.LONGEST_STREAK] = updatedHistory.longestStreak
+                    stored[Keys.LAST_PRIMARY_COMPLETION_DAY] = event.completedEpochDay
+                }
+            }
+            histories[event.category] = updatedHistory
+
+            val coinsBeforeCompletion = stored[Keys.COINS] ?: 0
+            stored[Keys.TOTAL_COMPLETIONS] = (stored[Keys.TOTAL_COMPLETIONS] ?: 0) + 1
+            stored[Keys.CATEGORY_HISTORY] = encodeCategoryHistories(histories)
+            stored[Keys.EXPERIENCE] = (stored[Keys.EXPERIENCE] ?: 0) + event.experienceEarned
+            stored[Keys.COINS] = coinsBeforeCompletion + event.coinsEarned
+            stored[Keys.TOTAL_COINS_EARNED] =
+                (stored[Keys.TOTAL_COINS_EARNED] ?: coinsBeforeCompletion) + event.coinsEarned
+            recordCompletionStats(stored, event.completedEpochDay, event.localHour)
+            grantNewAchievements(stored, histories)
+            stored[Keys.PENDING_COMPLETIONS] = PendingCompletionCodec.encode(
+                pending.filterNot { it.eventId == event.eventId }
+            )
+        }
+    }
+
+    private suspend fun removePendingCompletion(eventId: String) {
+        dataStore.edit { stored ->
+            val pending = PendingCompletionCodec.decode(stored[Keys.PENDING_COMPLETIONS])
+            stored[Keys.PENDING_COMPLETIONS] = PendingCompletionCodec.encode(
+                pending.filterNot { it.eventId == eventId }
+            )
         }
     }
 
@@ -881,6 +936,7 @@ class MvpRepository(
         val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         val VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
         val ROOM_GOALS_MIGRATED = booleanPreferencesKey("room_goals_migrated")
+        val PENDING_COMPLETIONS = stringPreferencesKey("pending_completions")
         val DEBUG_STORE_TEST_ACTIVE = booleanPreferencesKey("debug_store_test_active")
         val DEBUG_ORIGINAL_COINS = intPreferencesKey("debug_original_coins")
         val DEBUG_ORIGINAL_OWNED_BUNDLES = stringPreferencesKey("debug_original_owned_bundles")
@@ -897,5 +953,6 @@ class MvpRepository(
     private companion object {
         val HEX_COLOR = Regex("^#[0-9A-Fa-f]{6}$")
         const val STORE_TEST_COINS = 500
+        val completionMutex = Mutex()
     }
 }
