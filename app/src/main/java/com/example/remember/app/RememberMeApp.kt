@@ -28,6 +28,7 @@ import com.example.remember.feature.mvp.presentation.AvatarScreen
 import com.example.remember.feature.mvp.presentation.GoalsScreen
 import com.example.remember.feature.mvp.presentation.HistoryScreen
 import com.example.remember.feature.mvp.presentation.LoadingScreen
+import com.example.remember.feature.mvp.presentation.LauncherIconPreviewScreen
 import com.example.remember.feature.mvp.presentation.MoreScreen
 import com.example.remember.feature.mvp.presentation.NeoBottomBar
 import com.example.remember.feature.mvp.presentation.NeoTodayScreen
@@ -49,13 +50,20 @@ fun RememberMeApp(
     initialPageName: String? = null,
     initialAvatarGroupName: String? = null,
     storeTestAction: String? = null,
-    historyPreview: Boolean = false
+    historyPreview: Boolean = false,
+    loadingPreviewStage: Int? = null,
+    launcherIconPreview: Boolean = false
 ) {
+    if (launcherIconPreview) {
+        LauncherIconPreviewScreen()
+        return
+    }
     val context = LocalContext.current
     val repository = remember { MvpRepository(context.applicationContext) }
     val state by repository.state.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    var initialLoadingFinished by rememberSaveable { mutableStateOf(false) }
     var page by rememberSaveable {
         mutableStateOf(MvpPage.entries.firstOrNull { it.name == initialPageName } ?: MvpPage.TODAY)
     }
@@ -94,10 +102,16 @@ fun RememberMeApp(
         }
     }
 
-    if (currentState == null) {
-        LoadingScreen()
+    if (!initialLoadingFinished) {
+        LoadingScreen(
+            readyToContinue = currentState != null,
+            previewStage = loadingPreviewStage,
+            onFinished = { initialLoadingFinished = true }
+        )
         return
     }
+
+    if (currentState == null) return
 
     if (!currentState.isOnboardingComplete) {
         OnboardingScreen(state = currentState) { name, category, bodyItemId ->

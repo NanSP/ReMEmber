@@ -42,6 +42,13 @@ class MainActivity : ComponentActivity() {
             null
         }
         val historyPreview = isDebuggable && intent.getBooleanExtra(EXTRA_HISTORY_PREVIEW, false)
+        val loadingPreviewStage = if (isDebuggable) {
+            intent.getIntExtra(EXTRA_LOADING_PREVIEW_STAGE, -1).takeIf { it in 0..3 }
+        } else {
+            null
+        }
+        val launcherIconPreview =
+            isDebuggable && intent.getBooleanExtra(EXTRA_LAUNCHER_ICON_PREVIEW, false)
         setContent {
             ReMEmberTheme {
                 RememberMeApp(
@@ -50,7 +57,9 @@ class MainActivity : ComponentActivity() {
                     initialPageName = initialPageName,
                     initialAvatarGroupName = initialAvatarGroupName,
                     storeTestAction = storeTestAction,
-                    historyPreview = historyPreview
+                    historyPreview = historyPreview,
+                    loadingPreviewStage = loadingPreviewStage,
+                    launcherIconPreview = launcherIconPreview
                 )
             }
         }
@@ -63,5 +72,7 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_INITIAL_AVATAR_GROUP = "initial_avatar_group"
         const val EXTRA_STORE_TEST_ACTION = "store_test_action"
         const val EXTRA_HISTORY_PREVIEW = "history_preview"
+        const val EXTRA_LOADING_PREVIEW_STAGE = "loading_preview_stage"
+        const val EXTRA_LAUNCHER_ICON_PREVIEW = "launcher_icon_preview"
     }
 }

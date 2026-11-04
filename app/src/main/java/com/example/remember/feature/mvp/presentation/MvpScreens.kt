@@ -32,7 +32,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -81,19 +80,6 @@ import com.example.remember.ui.theme.NeoElement
 
 enum class MvpPage(val isRoot: Boolean = false) {
     TODAY(true), GOALS(true), AVATAR(true), MORE(true), PROFILE, HISTORY, STORE(true), SETTINGS
-}
-
-@Composable
-fun LoadingScreen() {
-    Box(modifier = Modifier.fillMaxSize().background(NeoBackground), contentAlignment = Alignment.Center) {
-        NeomorphicCard(contentPadding = PaddingValues(28.dp)) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(color = NeoButton)
-            Spacer(Modifier.height(16.dp))
-            Text(stringResource(R.string.loading), color = NeoButton, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
 }
 
 @Composable

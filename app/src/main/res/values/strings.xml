@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">reMEmber</string>
     <string name="loading">Carregando sua jornada...</string>
+    <string name="loading_brand_description">ReMEmber carregando</string>
     <string name="onboarding_eyebrow">COMECE PEQUENO. AVANCE SEMPRE.</string>
     <string name="onboarding_title">Sua rotina pode virar progresso.</string>
     <string name="onboarding_description">Crie um perfil, escolha seu foco principal e transforme tarefas concluídas em XP, moedas e sequência.</string>
