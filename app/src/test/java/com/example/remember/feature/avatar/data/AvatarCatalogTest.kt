@@ -14,7 +14,7 @@ class AvatarCatalogTest {
 
         assertEquals(configuration.equippedItemIds.size, resolvedItems.size)
         assertEquals(resolvedItems.size, resolvedItems.map { it.slot }.distinct().size)
-        assertTrue(resolvedItems.all { it.assetPath.startsWith("avatar/") })
+        assertTrue(resolvedItems.all { it.assetPath.startsWith("avatar_studio/") })
         assertTrue(resolvedItems.all { it.assetPath.endsWith(".svg") })
     }
 
@@ -25,50 +25,51 @@ class AvatarCatalogTest {
         assertEquals(
             listOf(
                 AvatarSlot.BODY,
-                AvatarSlot.PANTS,
-                AvatarSlot.SHOES,
-                AvatarSlot.TOP,
                 AvatarSlot.FACE,
                 AvatarSlot.EYES,
-                AvatarSlot.EXPRESSION,
-                AvatarSlot.HAIR
+                AvatarSlot.BEARD,
+                AvatarSlot.HAIR,
+                AvatarSlot.GLASSES,
+                AvatarSlot.SHIRT,
+                AvatarSlot.HAT
             ),
             slots
         )
     }
 
     @Test
-    fun `configuration resolves only one selected body`() {
+    fun `configuration resolves only one selected item per slot`() {
         val configuration = AvatarConfiguration(
             AvatarCatalog.defaultConfiguration.equippedItemIds +
-                (AvatarSlot.BODY to "body_wide")
+                (AvatarSlot.HAIR to "hair_03") +
+                (AvatarSlot.GLASSES to "glasses_02")
         )
 
-        val bodyItems = AvatarCatalog.resolve(configuration).filter { it.slot == AvatarSlot.BODY }
-        assertEquals(listOf("body_wide"), bodyItems.map { it.id })
+        val resolved = AvatarCatalog.resolve(configuration)
+        assertEquals(listOf("hair_03"), resolved.filter { it.slot == AvatarSlot.HAIR }.map { it.id })
+        assertEquals(listOf("glasses_02"), resolved.filter { it.slot == AvatarSlot.GLASSES }.map { it.id })
     }
 
     @Test
-    fun `tops resolve a tailored asset for each body`() {
-        val base = AvatarCatalog.defaultConfiguration.equippedItemIds
-        val slim = AvatarConfiguration(base + (AvatarSlot.BODY to "body_slim"))
-        val medium = AvatarConfiguration(base + (AvatarSlot.BODY to "body_medium"))
-        val wide = AvatarConfiguration(base + (AvatarSlot.BODY to "body_wide"))
-        val top = AvatarCatalog.resolve(slim).first { it.slot == AvatarSlot.TOP }
-        val pants = AvatarCatalog.resolve(slim).first { it.slot == AvatarSlot.PANTS }
+    fun `every catalog item belongs to its queried slot`() {
+        AvatarSlot.entries.forEach { slot ->
+            assertTrue(AvatarCatalog.itemsFor(slot).all { it.slot == slot })
+        }
+    }
 
+    @Test
+    fun `body customization exposes only three supported formats`() {
         assertEquals(
-            "avatar/roupa/corpo_magro/13_roupa_camiseta_alinhada.svg",
-            AvatarCatalog.assetPathFor(top, slim)
+            listOf("body_01", "body_02", "body_03"),
+            AvatarCatalog.itemsFor(AvatarSlot.BODY).map { it.id }
         )
-        assertEquals(
-            "avatar/roupa/corpo_medio/13_roupa_camiseta_alinhada.svg",
-            AvatarCatalog.assetPathFor(top, medium)
-        )
-        assertEquals(
-            "avatar/roupa/corpo_largo/13_roupa_camiseta_alinhada.svg",
-            AvatarCatalog.assetPathFor(top, wide)
-        )
-        assertEquals(pants.assetPath, AvatarCatalog.assetPathFor(pants, wide))
+    }
+
+    @Test
+    fun `expanded catalog exposes new hair and clothing options`() {
+        assertEquals(15, AvatarCatalog.itemsFor(AvatarSlot.HAIR).size)
+        assertEquals(8, AvatarCatalog.itemsFor(AvatarSlot.SHIRT).size)
+        assertTrue(AvatarCatalog.contains(AvatarSlot.HAIR, "hair_15"))
+        assertTrue(AvatarCatalog.contains(AvatarSlot.SHIRT, "shirt_08"))
     }
 }
