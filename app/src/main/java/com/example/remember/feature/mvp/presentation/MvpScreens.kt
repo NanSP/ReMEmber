@@ -80,7 +80,7 @@ import com.example.remember.ui.theme.NeoButton
 import com.example.remember.ui.theme.NeoElement
 
 enum class MvpPage(val isRoot: Boolean = false) {
-    TODAY(true), GOALS(true), AVATAR(true), MORE(true), PROFILE, STORE(true), SETTINGS
+    TODAY(true), GOALS(true), AVATAR(true), MORE(true), PROFILE, HISTORY, STORE(true), SETTINGS
 }
 
 @Composable
@@ -886,6 +886,7 @@ fun MoreScreen(contentPadding: PaddingValues, onNavigate: (MvpPage) -> Unit) {
     ) {
         item { ScreenHeading(R.string.more_title, R.string.more_description) }
         item { MoreCard(R.string.profile, R.string.profile_description) { onNavigate(MvpPage.PROFILE) } }
+        item { MoreCard(R.string.history_title, R.string.history_description) { onNavigate(MvpPage.HISTORY) } }
         item { MoreCard(R.string.settings, R.string.settings_description) { onNavigate(MvpPage.SETTINGS) } }
     }
 }

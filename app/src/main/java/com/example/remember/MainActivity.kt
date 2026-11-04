@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
         } else {
             null
         }
+        val historyPreview = isDebuggable && intent.getBooleanExtra(EXTRA_HISTORY_PREVIEW, false)
         setContent {
             ReMEmberTheme {
                 RememberMeApp(
@@ -48,7 +49,8 @@ class MainActivity : ComponentActivity() {
                     scenePreviewCategory = scenePreviewCategory,
                     initialPageName = initialPageName,
                     initialAvatarGroupName = initialAvatarGroupName,
-                    storeTestAction = storeTestAction
+                    storeTestAction = storeTestAction,
+                    historyPreview = historyPreview
                 )
             }
         }
@@ -60,5 +62,6 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_INITIAL_PAGE = "initial_page"
         const val EXTRA_INITIAL_AVATAR_GROUP = "initial_avatar_group"
         const val EXTRA_STORE_TEST_ACTION = "store_test_action"
+        const val EXTRA_HISTORY_PREVIEW = "history_preview"
     }
 }

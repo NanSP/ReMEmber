@@ -43,4 +43,26 @@ class GoalRoomMapperTest {
 
         assertNull(entity.toDomain())
     }
+
+    @Test
+    fun `completion entity maps to history snapshot`() {
+        val entity = GoalCompletionEntity(
+            id = 7,
+            goalId = 42,
+            goalTitle = "Beber água",
+            category = GoalCategory.FOOD_AND_HYDRATION.name,
+            completedEpochDay = 20_000,
+            completedAtMillis = 123_456,
+            experienceEarned = 15,
+            coinsEarned = 3
+        )
+
+        val history = entity.toHistoryItem()
+
+        assertEquals(7L, history?.id)
+        assertEquals("Beber água", history?.goalTitle)
+        assertEquals(GoalCategory.FOOD_AND_HYDRATION, history?.category)
+        assertEquals(15, history?.experienceEarned)
+        assertEquals(3, history?.coinsEarned)
+    }
 }

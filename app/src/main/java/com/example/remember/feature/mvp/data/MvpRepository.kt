@@ -27,6 +27,8 @@ import com.example.remember.feature.mvp.data.local.GoalCompletionEntity
 import com.example.remember.feature.mvp.data.local.RememberDatabase
 import com.example.remember.feature.mvp.data.local.toDomain
 import com.example.remember.feature.mvp.data.local.toEntity
+import com.example.remember.feature.mvp.data.local.toHistoryItem
+import com.example.remember.feature.mvp.domain.CompletionHistoryItem
 import com.example.remember.feature.store.data.StoreCatalog
 import com.example.remember.feature.store.data.StorePurchaseResult
 import java.io.IOException
@@ -69,8 +71,16 @@ class MvpRepository(
     val state: Flow<MvpState> = flow {
         migrateLegacyGoalsIfNeeded()
         emitAll(
-            combine(preferences, goalDao.observeAll()) { storedPreferences, entities ->
-                decodeState(storedPreferences, entities.mapNotNull { it.toDomain() })
+            combine(
+                preferences,
+                goalDao.observeAll(),
+                completionDao.observeAll()
+            ) { storedPreferences, entities, completions ->
+                decodeState(
+                    storedPreferences,
+                    entities.mapNotNull { it.toDomain() },
+                    completions.mapNotNull { it.toHistoryItem() }
+                )
             }
         )
     }
@@ -588,7 +598,11 @@ class MvpRepository(
             (preferences[Keys.TOTAL_COINS_EARNED] ?: 0) + achievementCoins
     }
 
-    private fun decodeState(preferences: Preferences, goals: List<MvpGoal>): MvpState {
+    private fun decodeState(
+        preferences: Preferences,
+        goals: List<MvpGoal>,
+        completions: List<CompletionHistoryItem>
+    ): MvpState {
         val today = currentEpochDay()
         val primaryCategory = preferences.category(Keys.PRIMARY_CATEGORY)
         val storedHistories = decodeCategoryHistories(preferences, goals)
@@ -613,6 +627,7 @@ class MvpRepository(
         profileName = preferences[Keys.PROFILE_NAME].orEmpty(),
         primaryCategory = primaryCategory,
         goals = goals.map { it.normalizedAt(today) },
+        completionHistory = completions,
         experience = preferences[Keys.EXPERIENCE] ?: 0,
         coins = preferences[Keys.COINS] ?: 0,
         currentStreak = primaryHistory.currentStreak,

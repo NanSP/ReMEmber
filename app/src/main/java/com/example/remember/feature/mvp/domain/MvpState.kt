@@ -23,10 +23,22 @@ data class MvpGoal(
 
 enum class GoalRecurrence { NONE, DAILY, WEEKLY }
 
+data class CompletionHistoryItem(
+    val id: Long,
+    val goalId: Long,
+    val goalTitle: String,
+    val category: GoalCategory,
+    val completedEpochDay: Long,
+    val completedAtMillis: Long,
+    val experienceEarned: Int,
+    val coinsEarned: Int
+)
+
 data class MvpState(
     val profileName: String = "",
     val primaryCategory: GoalCategory = GoalCategory.STUDY,
     val goals: List<MvpGoal> = emptyList(),
+    val completionHistory: List<CompletionHistoryItem> = emptyList(),
     val experience: Int = 0,
     val coins: Int = 0,
     val currentStreak: Int = 0,

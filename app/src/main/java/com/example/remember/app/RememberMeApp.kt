@@ -23,8 +23,10 @@ import com.example.remember.feature.goals.domain.model.GoalCategory
 import com.example.remember.feature.mvp.data.MvpRepository
 import com.example.remember.feature.mvp.data.MvpRepository.AvatarColorSelection
 import com.example.remember.feature.mvp.data.PrimaryCategoryChangeStatus
+import com.example.remember.feature.mvp.domain.CompletionHistoryItem
 import com.example.remember.feature.mvp.presentation.AvatarScreen
 import com.example.remember.feature.mvp.presentation.GoalsScreen
+import com.example.remember.feature.mvp.presentation.HistoryScreen
 import com.example.remember.feature.mvp.presentation.LoadingScreen
 import com.example.remember.feature.mvp.presentation.MoreScreen
 import com.example.remember.feature.mvp.presentation.NeoBottomBar
@@ -38,6 +40,7 @@ import com.example.remember.feature.store.data.StorePurchaseResult
 import com.example.remember.feature.store.data.StoreCatalog
 import com.example.remember.ui.theme.NeoBackground
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @Composable
 fun RememberMeApp(
@@ -45,7 +48,8 @@ fun RememberMeApp(
     scenePreviewCategory: GoalCategory? = null,
     initialPageName: String? = null,
     initialAvatarGroupName: String? = null,
-    storeTestAction: String? = null
+    storeTestAction: String? = null,
+    historyPreview: Boolean = false
 ) {
     val context = LocalContext.current
     val repository = remember { MvpRepository(context.applicationContext) }
@@ -55,7 +59,23 @@ fun RememberMeApp(
     var page by rememberSaveable {
         mutableStateOf(MvpPage.entries.firstOrNull { it.name == initialPageName } ?: MvpPage.TODAY)
     }
-    val currentState = state
+    val currentState = state?.let { storedState ->
+        if (!historyPreview) storedState else {
+            val today = LocalDate.now().toEpochDay()
+            storedState.copy(
+                profileName = storedState.profileName.ifBlank { "Teste" },
+                selectedBodyId = storedState.selectedBodyId.ifBlank { "body_03" },
+                completionHistory = listOf(
+                    CompletionHistoryItem(1, 101, "Estudar Kotlin", GoalCategory.STUDY, today,
+                        System.currentTimeMillis(), 20, 5),
+                    CompletionHistoryItem(2, 102, "Beber água", GoalCategory.FOOD_AND_HYDRATION,
+                        today - 1, System.currentTimeMillis() - 86_400_000, 10, 2),
+                    CompletionHistoryItem(3, 103, "Caminhar 20 minutos", GoalCategory.EXERCISE,
+                        today - 8, System.currentTimeMillis() - 8 * 86_400_000, 15, 3)
+                )
+            )
+        }
+    }
 
     LaunchedEffect(storeTestAction) {
         when (storeTestAction) {
@@ -243,6 +263,11 @@ fun RememberMeApp(
             MvpPage.PROFILE -> ProfileScreen(
                 state = currentState,
                 avatarConfiguration = avatarConfiguration,
+                contentPadding = contentPadding,
+                onBack = { page = MvpPage.MORE }
+            )
+            MvpPage.HISTORY -> HistoryScreen(
+                state = currentState,
                 contentPadding = contentPadding,
                 onBack = { page = MvpPage.MORE }
             )

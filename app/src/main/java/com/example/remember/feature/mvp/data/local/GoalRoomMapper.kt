@@ -2,6 +2,7 @@ package com.example.remember.feature.mvp.data.local
 
 import com.example.remember.feature.goals.domain.model.GoalCategory
 import com.example.remember.feature.mvp.domain.GoalRecurrence
+import com.example.remember.feature.mvp.domain.CompletionHistoryItem
 import com.example.remember.feature.mvp.domain.MvpGoal
 
 internal fun MvpGoal.toEntity(createdAtMillis: Long = id): GoalEntity = GoalEntity(
@@ -26,5 +27,18 @@ internal fun GoalEntity.toDomain(): MvpGoal? = runCatching {
         lastCompletedEpochDay = lastCompletedEpochDay,
         reminderMinutesOfDay = reminderMinutesOfDay,
         reminderEnabled = reminderEnabled
+    )
+}.getOrNull()
+
+internal fun GoalCompletionEntity.toHistoryItem(): CompletionHistoryItem? = runCatching {
+    CompletionHistoryItem(
+        id = id,
+        goalId = goalId,
+        goalTitle = goalTitle,
+        category = GoalCategory.valueOf(category),
+        completedEpochDay = completedEpochDay,
+        completedAtMillis = completedAtMillis,
+        experienceEarned = experienceEarned,
+        coinsEarned = coinsEarned
     )
 }.getOrNull()
