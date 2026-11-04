@@ -49,4 +49,12 @@
     <string name="season_title_food">Guardião da Horta</string>
     <string name="season_title_exercise">Atleta Incansável</string>
     <string name="season_title_tasks">Mestre da Organização</string>
+    <string name="bonus_mission_study">Missão: estude por 15 minutos</string>
+    <string name="bonus_mission_food">Missão: beba um copo de água</string>
+    <string name="bonus_mission_exercise">Missão: movimente-se por 10 minutos</string>
+    <string name="bonus_mission_tasks">Missão: conclua uma tarefa rápida</string>
+    <string name="bonus_mission_reward">+20 XP · +10 moedas</string>
+    <string name="bonus_mission_action">Fazer</string>
+    <string name="streak_recovery_title">Recuperar sequência</string>
+    <string name="streak_recovery_description">Use uma recuperação hoje · %1$d restantes no mês</string>
 </resources>

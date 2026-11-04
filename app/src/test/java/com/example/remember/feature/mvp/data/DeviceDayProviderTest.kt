@@ -17,4 +17,12 @@ class DeviceDayProviderTest {
         assertEquals(LocalDate.of(2026, 10, 29).toEpochDay(), bahiaDay)
         assertEquals(LocalDate.of(2026, 10, 30).toEpochDay(), utcDay)
     }
+
+    @Test
+    fun `monthly recovery key follows calendar year and month`() {
+        assertEquals(
+            "2026-11",
+            DeviceDayProvider.monthKey(LocalDate.of(2026, 11, 4).toEpochDay())
+        )
+    }
 }

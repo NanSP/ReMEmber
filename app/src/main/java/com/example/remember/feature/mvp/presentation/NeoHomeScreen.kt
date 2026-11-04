@@ -68,6 +68,7 @@ import com.example.remember.feature.goals.domain.model.GoalCategory
 import com.example.remember.feature.mvp.domain.MvpGoal
 import com.example.remember.feature.mvp.domain.MvpState
 import com.example.remember.feature.mvp.domain.RewardRules
+import com.example.remember.feature.mvp.domain.DailyBonusMission
 import com.example.remember.feature.scenes.data.SceneCatalog
 import com.example.remember.ui.components.NeomorphicCard
 import com.example.remember.ui.components.NeomorphicIconButton
@@ -86,7 +87,9 @@ fun NeoTodayScreen(
     contentPadding: PaddingValues,
     onCreateGoal: () -> Unit,
     onSelectPrimaryCategory: (GoalCategory) -> Unit,
-    onCompleteGoal: (Long) -> Unit
+    onCompleteGoal: (Long) -> Unit,
+    onCompleteBonusMission: () -> Unit,
+    onRecoverStreak: () -> Unit
 ) {
     var focusMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var notificationsExpanded by rememberSaveable { mutableStateOf(false) }
@@ -140,9 +143,12 @@ fun NeoTodayScreen(
 
                 NotificationsMenu(
                     pendingGoals = pendingGoals,
+                    canRecoverStreak = state.canRecoverStreak,
+                    recoveriesRemaining = state.streakRecoveriesRemaining,
                     expanded = notificationsExpanded,
                     onOpen = { notificationsExpanded = true },
                     onDismiss = { notificationsExpanded = false },
+                    onRecoverStreak = onRecoverStreak,
                     modifier = Modifier.align(Alignment.TopStart).padding(14.dp)
                 )
             }
@@ -151,8 +157,10 @@ fun NeoTodayScreen(
         GoalsPanel(
             modifier = Modifier.fillMaxWidth().height(226.dp + footerInset),
             goals = state.goals,
+            bonusMission = state.bonusMission,
             onCreateGoal = onCreateGoal,
             onCompleteGoal = onCompleteGoal,
+            onCompleteBonusMission = onCompleteBonusMission,
             footerInset = footerInset
         )
     }
@@ -161,14 +169,18 @@ fun NeoTodayScreen(
 @Composable
 private fun NotificationsMenu(
     pendingGoals: List<MvpGoal>,
+    canRecoverStreak: Boolean,
+    recoveriesRemaining: Int,
     expanded: Boolean,
     onOpen: () -> Unit,
     onDismiss: () -> Unit,
+    onRecoverStreak: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val notificationCount = pendingGoals.size + if (canRecoverStreak) 1 else 0
     val countDescription = stringResource(
         R.string.home_notifications_count,
-        pendingGoals.size
+        notificationCount
     )
     Box(modifier) {
         NeomorphicIconButton(
@@ -180,7 +192,7 @@ private fun NotificationsMenu(
             iconColor = Color.White
         ) {
             Text("!", fontSize = 25.sp, fontWeight = FontWeight.Black)
-            if (pendingGoals.isNotEmpty()) {
+            if (notificationCount > 0) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -190,7 +202,7 @@ private fun NotificationsMenu(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        pendingGoals.size.coerceAtMost(99).toString(),
+                        notificationCount.coerceAtMost(99).toString(),
                         color = NeoButton,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black
@@ -211,7 +223,32 @@ private fun NotificationsMenu(
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
             )
-            if (pendingGoals.isEmpty()) {
+            if (canRecoverStreak) {
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(
+                                stringResource(R.string.streak_recovery_title),
+                                color = NeoText,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                stringResource(
+                                    R.string.streak_recovery_description,
+                                    recoveriesRemaining
+                                ),
+                                color = NeoText,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    },
+                    onClick = {
+                        onRecoverStreak()
+                        onDismiss()
+                    }
+                )
+            }
+            if (pendingGoals.isEmpty() && !canRecoverStreak) {
                 Text(
                     stringResource(R.string.home_notifications_empty),
                     color = NeoText,
@@ -778,8 +815,10 @@ private fun SceneBackdrop(category: GoalCategory, longestStreak: Int) {
 private fun GoalsPanel(
     modifier: Modifier = Modifier,
     goals: List<MvpGoal>,
+    bonusMission: DailyBonusMission,
     onCreateGoal: () -> Unit,
     onCompleteGoal: (Long) -> Unit,
+    onCompleteBonusMission: () -> Unit,
     footerInset: Dp = 0.dp
 ) {
     val completed = goals.count { it.isCompleted }
@@ -827,7 +866,12 @@ private fun GoalsPanel(
                         .padding(horizontal = 14.dp, vertical = 5.dp)
                 )
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
+            BonusMissionRow(
+                mission = bonusMission,
+                onComplete = onCompleteBonusMission
+            )
+            Spacer(Modifier.height(6.dp))
             if (goals.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
@@ -851,6 +895,59 @@ private fun GoalsPanel(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun BonusMissionRow(
+    mission: DailyBonusMission,
+    onComplete: () -> Unit
+) {
+    val title = stringResource(
+        when (mission.category) {
+            GoalCategory.STUDY -> R.string.bonus_mission_study
+            GoalCategory.FOOD_AND_HYDRATION -> R.string.bonus_mission_food
+            GoalCategory.EXERCISE -> R.string.bonus_mission_exercise
+            GoalCategory.SIMPLE_TASK -> R.string.bonus_mission_tasks
+        }
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(NeoBackground)
+            .clickable(
+                enabled = !mission.completed,
+                role = Role.Button,
+                onClick = onComplete
+            )
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("★", color = NeoButton, fontSize = 18.sp)
+        Spacer(Modifier.width(8.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                color = NeoText,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                stringResource(R.string.bonus_mission_reward),
+                color = NeoText,
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            if (mission.completed) "✓" else stringResource(R.string.bonus_mission_action),
+            color = NeoButton,
+            fontWeight = FontWeight.Black,
+            style = MaterialTheme.typography.labelMedium
+        )
     }
 }
 

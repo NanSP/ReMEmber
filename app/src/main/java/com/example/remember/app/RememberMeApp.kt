@@ -89,6 +89,11 @@ fun RememberMeApp(
     val goalCompletedMessage = stringResource(R.string.goal_completed_feedback)
     val goalAddedMessage = stringResource(R.string.goal_added_feedback)
     val goalUpdatedMessage = stringResource(R.string.goal_updated_feedback)
+    val bonusMissionCompletedMessage = stringResource(R.string.bonus_mission_completed)
+    val bonusMissionAlreadyCompletedMessage =
+        stringResource(R.string.bonus_mission_already_completed)
+    val streakRecoveredMessage = stringResource(R.string.streak_recovered)
+    val streakRecoveryUnavailableMessage = stringResource(R.string.streak_recovery_unavailable)
     val primaryCategoryChangedMessage = stringResource(R.string.primary_category_changed)
     val primaryCategoryLockedMessage = stringResource(R.string.primary_category_locked)
     val storePurchaseSuccess = stringResource(R.string.store_purchase_success)
@@ -173,6 +178,24 @@ fun RememberMeApp(
                     scope.launch {
                         repository.completeGoal(goalId)
                         snackbarHostState.showSnackbar(goalCompletedMessage)
+                    }
+                },
+                onCompleteBonusMission = {
+                    scope.launch {
+                        val completed = repository.completeBonusMission()
+                        snackbarHostState.showSnackbar(
+                            if (completed) bonusMissionCompletedMessage
+                            else bonusMissionAlreadyCompletedMessage
+                        )
+                    }
+                },
+                onRecoverStreak = {
+                    scope.launch {
+                        val recovered = repository.recoverStreak()
+                        snackbarHostState.showSnackbar(
+                            if (recovered) streakRecoveredMessage
+                            else streakRecoveryUnavailableMessage
+                        )
                     }
                 }
             )

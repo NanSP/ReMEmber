@@ -34,6 +34,13 @@ data class MvpState(
     val totalCompletions: Int = 0,
     val categoryHistory: Map<GoalCategory, CategoryHistory> = emptyMap(),
     val primaryCategoryChangeDaysRemaining: Int = 0,
+    val bonusMission: DailyBonusMission = DailyBonusMission(
+        category = GoalCategory.STUDY,
+        completed = false
+    ),
+    val unlockedAchievements: Set<AchievementId> = emptySet(),
+    val streakRecoveriesRemaining: Int = GamificationRules.MONTHLY_RECOVERIES,
+    val canRecoverStreak: Boolean = false,
     val selectedBodyId: String = "",
     val selectedFaceId: String = "face_01",
     val selectedEyesId: String = "eyes_01",

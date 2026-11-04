@@ -13,6 +13,10 @@ import com.example.remember.feature.avatar.data.AvatarCatalog
 import com.example.remember.feature.avatar.domain.model.AvatarSlot
 import com.example.remember.feature.goals.domain.model.GoalCategory
 import com.example.remember.feature.mvp.domain.CategoryHistory
+import com.example.remember.feature.mvp.domain.AchievementId
+import com.example.remember.feature.mvp.domain.AchievementStats
+import com.example.remember.feature.mvp.domain.DailyBonusMission
+import com.example.remember.feature.mvp.domain.GamificationRules
 import com.example.remember.feature.mvp.domain.GoalRecurrence
 import com.example.remember.feature.mvp.domain.MvpGoal
 import com.example.remember.feature.mvp.domain.MvpState
@@ -43,7 +47,8 @@ data class ReminderSnapshot(
 
 class MvpRepository(
     private val context: Context,
-    private val currentEpochDay: () -> Long = DeviceDayProvider::currentEpochDay
+    private val currentEpochDay: () -> Long = DeviceDayProvider::currentEpochDay,
+    private val currentLocalHour: () -> Int = DeviceDayProvider::currentLocalHour
 ) {
     private val reminderScheduler = GoalReminderScheduler(context)
 
@@ -219,8 +224,67 @@ class MvpRepository(
             preferences[Keys.EXPERIENCE] =
                 (preferences[Keys.EXPERIENCE] ?: 0) + experienceEarned
             preferences[Keys.COINS] = (preferences[Keys.COINS] ?: 0) + coinsEarned
+            preferences[Keys.TOTAL_COINS_EARNED] =
+                (preferences[Keys.TOTAL_COINS_EARNED]
+                    ?: ((preferences[Keys.COINS] ?: 0) - coinsEarned).coerceAtLeast(0)) + coinsEarned
+            recordCompletionStats(preferences, today, currentLocalHour())
+            grantNewAchievements(preferences, histories)
         }
         completedGoal?.let(reminderScheduler::sync)
+    }
+
+    suspend fun completeBonusMission(): Boolean {
+        var completed = false
+        context.mvpDataStore.edit { preferences ->
+            val today = currentEpochDay()
+            if (preferences[Keys.LAST_BONUS_MISSION_DAY] == today) return@edit
+            preferences[Keys.LAST_BONUS_MISSION_DAY] = today
+            preferences[Keys.BONUS_MISSIONS_COMPLETED] =
+                (preferences[Keys.BONUS_MISSIONS_COMPLETED] ?: 0) + 1
+            preferences[Keys.EXPERIENCE] =
+                (preferences[Keys.EXPERIENCE] ?: 0) + GamificationRules.BONUS_EXPERIENCE
+            preferences[Keys.COINS] =
+                (preferences[Keys.COINS] ?: 0) + GamificationRules.BONUS_COINS
+            preferences[Keys.TOTAL_COINS_EARNED] =
+                (preferences[Keys.TOTAL_COINS_EARNED]
+                    ?: ((preferences[Keys.COINS] ?: 0) - GamificationRules.BONUS_COINS)
+                        .coerceAtLeast(0)) + GamificationRules.BONUS_COINS
+            grantNewAchievements(preferences, decodeCategoryHistories(preferences))
+            completed = true
+        }
+        return completed
+    }
+
+    suspend fun recoverStreak(): Boolean {
+        var recovered = false
+        context.mvpDataStore.edit { preferences ->
+            val today = currentEpochDay()
+            val month = DeviceDayProvider.monthKey(today)
+            val used = if (preferences[Keys.RECOVERY_MONTH] == month) {
+                preferences[Keys.RECOVERIES_USED] ?: 0
+            } else {
+                0
+            }
+            val primaryCategory = preferences.category(Keys.PRIMARY_CATEGORY)
+            val histories = decodeCategoryHistories(preferences).toMutableMap()
+            val history = histories.getValue(primaryCategory)
+            if (!GamificationRules.canRecoverStreak(
+                    currentStreak = history.currentStreak,
+                    lastPrimaryCompletionDay = history.lastPrimaryCompletionDay,
+                    currentDay = today,
+                    recoveriesUsedThisMonth = used
+                )
+            ) return@edit
+
+            val recoveredHistory = history.copy(lastPrimaryCompletionDay = today - 1)
+            histories[primaryCategory] = recoveredHistory
+            preferences[Keys.CATEGORY_HISTORY] = encodeCategoryHistories(histories)
+            preferences[Keys.LAST_PRIMARY_COMPLETION_DAY] = today - 1
+            preferences[Keys.RECOVERY_MONTH] = month
+            preferences[Keys.RECOVERIES_USED] = used + 1
+            recovered = true
+        }
+        return recovered
     }
 
     suspend fun deleteGoal(goalId: Long) {
@@ -243,6 +307,7 @@ class MvpRepository(
                 else -> {
                     preferences[Keys.COINS] = coins - bundle.price
                     preferences[Keys.OWNED_BUNDLES] = encodeIdSet(owned + bundle.id)
+                    grantNewAchievements(preferences, decodeCategoryHistories(preferences))
                     StorePurchaseResult.PURCHASED
                 }
             }
@@ -376,10 +441,75 @@ class MvpRepository(
         )
     }
 
+    private fun recordCompletionStats(
+        preferences: androidx.datastore.preferences.core.MutablePreferences,
+        currentDay: Long,
+        localHour: Int
+    ) {
+        val countToday = if (preferences[Keys.COMPLETION_COUNT_DAY] == currentDay) {
+            (preferences[Keys.COMPLETION_COUNT_TODAY] ?: 0) + 1
+        } else {
+            1
+        }
+        preferences[Keys.COMPLETION_COUNT_DAY] = currentDay
+        preferences[Keys.COMPLETION_COUNT_TODAY] = countToday
+        preferences[Keys.MAX_DAILY_COMPLETIONS] = maxOf(
+            preferences[Keys.MAX_DAILY_COMPLETIONS] ?: 0,
+            countToday
+        )
+        if (localHour < 6 || localHour >= 18) {
+            preferences[Keys.NIGHT_COMPLETIONS] =
+                (preferences[Keys.NIGHT_COMPLETIONS] ?: 0) + 1
+        } else {
+            preferences[Keys.DAY_COMPLETIONS] =
+                (preferences[Keys.DAY_COMPLETIONS] ?: 0) + 1
+        }
+    }
+
+    private fun grantNewAchievements(
+        preferences: androidx.datastore.preferences.core.MutablePreferences,
+        histories: Map<GoalCategory, CategoryHistory>
+    ) {
+        val existing = decodeAchievementIds(preferences[Keys.UNLOCKED_ACHIEVEMENTS])
+        val ownedBundles = decodeIdSet(preferences[Keys.OWNED_BUNDLES])
+        val accessoriesOwned = StoreCatalog.bundles
+            .filter { it.id in ownedBundles }
+            .flatMap { it.equippedItemIds.values }
+            .distinct()
+            .size
+        val stats = AchievementStats(
+            totalCompletions = preferences[Keys.TOTAL_COMPLETIONS] ?: 0,
+            highestCategoryCompletions = histories.values.maxOfOrNull {
+                it.totalCompletions
+            } ?: 0,
+            highestDailyCompletions = preferences[Keys.MAX_DAILY_COMPLETIONS] ?: 0,
+            nightCompletions = preferences[Keys.NIGHT_COMPLETIONS] ?: 0,
+            bonusMissionsCompleted = preferences[Keys.BONUS_MISSIONS_COMPLETED] ?: 0,
+            longestStreak = histories.values.maxOfOrNull { it.longestStreak } ?: 0,
+            activeCategories = histories.values.count { it.totalCompletions > 0 },
+            totalCoinsEarned = preferences[Keys.TOTAL_COINS_EARNED]
+                ?: preferences[Keys.COINS]
+                ?: 0,
+            totalExperience = preferences[Keys.EXPERIENCE] ?: 0,
+            accessoriesOwned = accessoriesOwned
+        )
+        val newlyUnlocked = GamificationRules.unlockedAchievements(stats) - existing
+        if (newlyUnlocked.isEmpty()) return
+        val achievementExperience = newlyUnlocked.size * GamificationRules.ACHIEVEMENT_EXPERIENCE
+        val achievementCoins = newlyUnlocked.size * GamificationRules.ACHIEVEMENT_COINS
+        preferences[Keys.UNLOCKED_ACHIEVEMENTS] = encodeAchievementIds(existing + newlyUnlocked)
+        preferences[Keys.EXPERIENCE] =
+            (preferences[Keys.EXPERIENCE] ?: 0) + achievementExperience
+        preferences[Keys.COINS] = (preferences[Keys.COINS] ?: 0) + achievementCoins
+        preferences[Keys.TOTAL_COINS_EARNED] =
+            (preferences[Keys.TOTAL_COINS_EARNED] ?: 0) + achievementCoins
+    }
+
     private fun decodeState(preferences: Preferences): MvpState {
         val today = currentEpochDay()
         val primaryCategory = preferences.category(Keys.PRIMARY_CATEGORY)
-        val histories = decodeCategoryHistories(preferences).mapValues { (_, history) ->
+        val storedHistories = decodeCategoryHistories(preferences)
+        val histories = storedHistories.mapValues { (_, history) ->
             history.copy(
                 currentStreak = RewardRules.activeStreak(
                     current = history.currentStreak,
@@ -389,6 +519,13 @@ class MvpRepository(
             )
         }
         val primaryHistory = histories.getValue(primaryCategory)
+        val storedPrimaryHistory = storedHistories.getValue(primaryCategory)
+        val month = DeviceDayProvider.monthKey(today)
+        val recoveriesUsed = if (preferences[Keys.RECOVERY_MONTH] == month) {
+            preferences[Keys.RECOVERIES_USED] ?: 0
+        } else {
+            0
+        }
         return MvpState(
         profileName = preferences[Keys.PROFILE_NAME].orEmpty(),
         primaryCategory = primaryCategory,
@@ -402,6 +539,21 @@ class MvpRepository(
         primaryCategoryChangeDaysRemaining = PrimaryCategoryRules.daysUntilChange(
             lastChangeDay = preferences[Keys.PRIMARY_CATEGORY_CHANGED_DAY],
             currentDay = today
+        ),
+        bonusMission = DailyBonusMission(
+            category = primaryCategory,
+            completed = preferences[Keys.LAST_BONUS_MISSION_DAY] == today
+        ),
+        unlockedAchievements = decodeAchievementIds(
+            preferences[Keys.UNLOCKED_ACHIEVEMENTS]
+        ),
+        streakRecoveriesRemaining =
+            (GamificationRules.MONTHLY_RECOVERIES - recoveriesUsed).coerceAtLeast(0),
+        canRecoverStreak = GamificationRules.canRecoverStreak(
+            currentStreak = storedPrimaryHistory.currentStreak,
+            lastPrimaryCompletionDay = storedPrimaryHistory.lastPrimaryCompletionDay,
+            currentDay = today,
+            recoveriesUsedThisMonth = recoveriesUsed
         ),
         selectedBodyId = selection(
             preferences,
@@ -539,6 +691,17 @@ class MvpRepository(
         ?.toSet()
         .orEmpty()
 
+    private fun encodeAchievementIds(ids: Set<AchievementId>): String =
+        ids.map(AchievementId::name).sorted().joinToString(",")
+
+    private fun decodeAchievementIds(value: String?): Set<AchievementId> = value
+        ?.split(',')
+        ?.mapNotNull { encoded ->
+            runCatching { AchievementId.valueOf(encoded) }.getOrNull()
+        }
+        ?.toSet()
+        .orEmpty()
+
     private fun Context.isDebuggable(): Boolean =
         applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
 
@@ -580,6 +743,17 @@ class MvpRepository(
         val TOTAL_COMPLETIONS = intPreferencesKey("total_completions")
         val CATEGORY_HISTORY = stringPreferencesKey("category_history")
         val PRIMARY_CATEGORY_CHANGED_DAY = longPreferencesKey("primary_category_changed_day")
+        val LAST_BONUS_MISSION_DAY = longPreferencesKey("last_bonus_mission_day")
+        val BONUS_MISSIONS_COMPLETED = intPreferencesKey("bonus_missions_completed")
+        val UNLOCKED_ACHIEVEMENTS = stringPreferencesKey("unlocked_achievements")
+        val TOTAL_COINS_EARNED = intPreferencesKey("total_coins_earned")
+        val COMPLETION_COUNT_DAY = longPreferencesKey("completion_count_day")
+        val COMPLETION_COUNT_TODAY = intPreferencesKey("completion_count_today")
+        val MAX_DAILY_COMPLETIONS = intPreferencesKey("max_daily_completions")
+        val DAY_COMPLETIONS = intPreferencesKey("day_completions")
+        val NIGHT_COMPLETIONS = intPreferencesKey("night_completions")
+        val RECOVERY_MONTH = stringPreferencesKey("recovery_month")
+        val RECOVERIES_USED = intPreferencesKey("recoveries_used")
         val LAST_COMPLETION_DAY = longPreferencesKey("last_completion_day")
         val LAST_PRIMARY_COMPLETION_DAY = longPreferencesKey("last_primary_completion_day")
         val SELECTED_BODY = stringPreferencesKey("selected_body")

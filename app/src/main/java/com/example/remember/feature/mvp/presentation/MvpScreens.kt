@@ -65,6 +65,7 @@ import com.example.remember.feature.mvp.data.MvpRepository.AvatarColorSelection
 import com.example.remember.feature.mvp.domain.MvpGoal
 import com.example.remember.feature.mvp.domain.MvpState
 import com.example.remember.feature.mvp.domain.GoalRecurrence
+import com.example.remember.feature.mvp.domain.AchievementId
 import com.example.remember.feature.store.data.StoreBundle
 import com.example.remember.feature.store.data.StoreCatalog
 import com.example.remember.ui.components.neomorphicTextFieldColors
@@ -957,6 +958,36 @@ fun ProfileScreen(
                 )
             }
         }
+        item {
+            Text(
+                stringResource(
+                    R.string.achievements_title,
+                    state.unlockedAchievements.size,
+                    AchievementId.entries.size
+                ),
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+        }
+        if (state.unlockedAchievements.isEmpty()) {
+            item {
+                Text(
+                    stringResource(R.string.achievements_empty),
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            state.unlockedAchievements.sortedBy(AchievementId::ordinal).forEach { achievement ->
+                item {
+                    CategoryHistoryCard(
+                        category = achievementTitle(achievement),
+                        summary = stringResource(R.string.achievement_reward)
+                    )
+                }
+            }
+        }
         item { ProfileMetric(R.string.profile_id, state.profileName.lowercase().replace(' ', '-')) }
     }
 }
@@ -974,6 +1005,22 @@ private fun CategoryHistoryCard(category: String, summary: String) {
         }
     }
 }
+
+@Composable
+private fun achievementTitle(achievement: AchievementId): String = stringResource(
+    when (achievement) {
+        AchievementId.FIRST_COMPLETION -> R.string.achievement_first_completion
+        AchievementId.CATEGORY_SPECIALIST -> R.string.achievement_category_specialist
+        AchievementId.PRODUCTIVE_DAY -> R.string.achievement_productive_day
+        AchievementId.NIGHT_OWL -> R.string.achievement_night_owl
+        AchievementId.BONUS_HUNTER -> R.string.achievement_bonus_hunter
+        AchievementId.SEVEN_DAY_STREAK -> R.string.achievement_seven_day_streak
+        AchievementId.CATEGORY_EXPLORER -> R.string.achievement_category_explorer
+        AchievementId.COIN_COLLECTOR -> R.string.achievement_coin_collector
+        AchievementId.XP_VETERAN -> R.string.achievement_xp_veteran
+        AchievementId.STYLE_COLLECTOR -> R.string.achievement_style_collector
+    }
+)
 
 @Composable
 private fun ProfileMetric(@StringRes label: Int, value: String) {
