@@ -129,7 +129,6 @@ fun RememberMeApp(
     val streakRecoveredMessage = stringResource(R.string.streak_recovered)
     val streakRecoveryUnavailableMessage = stringResource(R.string.streak_recovery_unavailable)
     val primaryCategoryChangedMessage = stringResource(R.string.primary_category_changed)
-    val primaryCategoryLockedMessage = stringResource(R.string.primary_category_locked)
     val storePurchaseSuccess = stringResource(R.string.store_purchase_success)
     val storeAlreadyOwned = stringResource(R.string.store_purchase_already_owned)
     val storeInsufficientCoins = stringResource(R.string.store_purchase_insufficient)
@@ -202,7 +201,11 @@ fun RememberMeApp(
                                 snackbarHostState.showSnackbar(primaryCategoryChangedMessage)
                             PrimaryCategoryChangeStatus.LOCKED ->
                                 snackbarHostState.showSnackbar(
-                                    primaryCategoryLockedMessage.format(result.daysRemaining)
+                                    context.resources.getQuantityString(
+                                        R.plurals.primary_category_locked,
+                                        result.daysRemaining,
+                                        result.daysRemaining
+                                    )
                                 )
                             PrimaryCategoryChangeStatus.ALREADY_SELECTED -> Unit
                         }

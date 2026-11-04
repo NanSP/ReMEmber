@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -49,6 +50,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -146,7 +153,6 @@ fun OnboardingScreen(
                 if (showError) Text(stringResource(R.string.name_required))
             }
         )
-        Text(stringResource(R.string.body_type), fontWeight = FontWeight.Bold)
         Box(
             modifier = Modifier.fillMaxWidth().height(236.dp).neomorphicInset(RoundedCornerShape(24.dp)),
             contentAlignment = Alignment.Center
@@ -205,7 +211,7 @@ fun TodayScreen(
     onCompleteGoal: (Long) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().testTag("avatar_editor_list"),
         contentPadding = PaddingValues(
             start = 20.dp,
             top = contentPadding.calculateTopPadding() + 24.dp,
@@ -292,7 +298,11 @@ fun TodayScreen(
 @Composable
 private fun StatsRow(state: MvpState) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        StatCard(stringResource(R.string.streak), stringResource(R.string.streak_days, state.currentStreak), Modifier.weight(1f))
+        StatCard(
+            stringResource(R.string.streak),
+            pluralStringResource(R.plurals.streak_days, state.currentStreak, state.currentStreak),
+            Modifier.weight(1f)
+        )
         StatCard(stringResource(R.string.coins), state.coins.toString(), Modifier.weight(1f))
         StatCard(stringResource(R.string.level), state.level.toString(), Modifier.weight(1f))
     }
@@ -694,7 +704,7 @@ private fun AvatarGroupTabs(selected: AvatarEditorGroup, onSelect: (AvatarEditor
 }
 
 @Composable
-private fun AvatarGroupPanel(
+internal fun AvatarGroupPanel(
     @StringRes title: Int,
     choices: List<Pair<String, Int>>,
     selected: String,
@@ -711,7 +721,9 @@ private fun AvatarGroupPanel(
         ) {
             Text(stringResource(title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             LazyRow(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("avatar_options_$title"),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
             ) {
@@ -719,7 +731,10 @@ private fun AvatarGroupPanel(
                     NeomorphicChoice(
                         selected = id == selected,
                         onClick = { onSelect(id) },
-                        modifier = Modifier.width(156.dp).height(72.dp)
+                        modifier = Modifier
+                            .width(156.dp)
+                            .height(72.dp)
+                            .testTag("avatar_option_$id")
                     ) {
                         Text(
                             text = stringResource(label),
@@ -747,21 +762,7 @@ private fun AvatarColorRow(colors: List<String>, selected: String, onSelect: (St
         contentPadding = PaddingValues(4.dp)
     ) {
         items(colors, key = { it }) { hex ->
-            val isSelected = selected.equals(hex, ignoreCase = true)
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(Color(android.graphics.Color.parseColor(hex)), CircleShape)
-                    .border(
-                        width = if (isSelected) 4.dp else 1.dp,
-                        color = if (isSelected) NeoButton else NeoElement,
-                        shape = CircleShape
-                    )
-                    .clickable { onSelect(hex) },
-                contentAlignment = Alignment.Center
-            ) {
-                if (isSelected) Text("\u2713", color = Color.White, fontWeight = FontWeight.Black)
-            }
+            AvatarColorSwatch(hex, selected.equals(hex, ignoreCase = true), onSelect)
         }
     }
 }
@@ -807,26 +808,41 @@ private fun ColorChoiceSection(
                 contentPadding = PaddingValues(4.dp)
             ) {
                 items(colors, key = { it }) { hex ->
-                    val isSelected = selected.equals(hex, ignoreCase = true)
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(Color(android.graphics.Color.parseColor(hex)), CircleShape)
-                            .border(
-                                width = if (isSelected) 4.dp else 1.dp,
-                                color = if (isSelected) NeoButton else NeoElement,
-                                shape = CircleShape
-                            )
-                            .clickable { onSelect(hex) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isSelected) {
-                            Text("✓", color = Color.White, fontWeight = FontWeight.Black)
-                        }
-                    }
+                    AvatarColorSwatch(hex, selected.equals(hex, ignoreCase = true), onSelect)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AvatarColorSwatch(
+    hex: String,
+    isSelected: Boolean,
+    onSelect: (String) -> Unit
+) {
+    val description = stringResource(R.string.avatar_color_option, hex)
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .background(Color(android.graphics.Color.parseColor(hex)), CircleShape)
+            .border(
+                width = if (isSelected) 4.dp else 1.dp,
+                color = if (isSelected) NeoButton else NeoElement,
+                shape = CircleShape
+            )
+            .semantics {
+                contentDescription = description
+                selected = isSelected
+            }
+            .selectable(
+                selected = isSelected,
+                role = Role.RadioButton,
+                onClick = { onSelect(hex) }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isSelected) Text("\u2713", color = Color.White, fontWeight = FontWeight.Black)
     }
 }
 
@@ -921,7 +937,12 @@ fun ProfileScreen(
         item { Text(state.profileName, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black) }
         item { StatsRow(state) }
         item { ProfileMetric(R.string.total_completions, state.totalCompletions.toString()) }
-        item { ProfileMetric(R.string.longest_streak, stringResource(R.string.streak_days, state.longestStreak)) }
+        item {
+            ProfileMetric(
+                R.string.longest_streak,
+                pluralStringResource(R.plurals.streak_days, state.longestStreak, state.longestStreak)
+            )
+        }
         item { ProfileMetric(R.string.primary_focus, categoryLabel(state.primaryCategory)) }
         item {
             Text(
@@ -938,9 +959,17 @@ fun ProfileScreen(
                     category = categoryLabel(category),
                     summary = stringResource(
                         R.string.category_history_summary,
-                        history.totalCompletions,
+                        pluralStringResource(
+                            R.plurals.completion_count,
+                            history.totalCompletions,
+                            history.totalCompletions
+                        ),
                         history.currentStreak,
-                        history.longestStreak
+                        pluralStringResource(
+                            R.plurals.streak_days,
+                            history.longestStreak,
+                            history.longestStreak
+                        )
                     )
                 )
             }
@@ -1146,7 +1175,11 @@ private fun StoreBundleCard(
                 }
                 if (missingCoins > 0) {
                     Text(
-                        stringResource(R.string.store_missing_coins, missingCoins),
+                        pluralStringResource(
+                            R.plurals.store_missing_coins,
+                            missingCoins,
+                            missingCoins
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.labelMedium
                     )

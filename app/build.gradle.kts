@@ -4,6 +4,17 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val releaseStorePath = providers.gradleProperty("RELEASE_STORE_FILE").orNull
+val releaseStorePassword = providers.gradleProperty("RELEASE_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.gradleProperty("RELEASE_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.gradleProperty("RELEASE_KEY_PASSWORD").orNull
+val hasReleaseSigning = listOf(
+    releaseStorePath,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.example.remember"
     compileSdk {
@@ -20,11 +31,26 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(requireNotNull(releaseStorePath))
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
     compileOptions {

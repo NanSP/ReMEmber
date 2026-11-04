@@ -1,6 +1,9 @@
 <resources>
     <string name="home_focus_description">Selecionar objetivo principal</string>
-    <string name="home_focus_lock_status">Nova troca disponível em %1$d dias</string>
+    <plurals name="home_focus_lock_status">
+        <item quantity="one">Nova troca disponível em %1$d dia</item>
+        <item quantity="other">Nova troca disponível em %1$d dias</item>
+    </plurals>
     <string name="home_focus_label">Foco</string>
     <string name="home_streak_description">Sequência atual</string>
     <string name="home_coins_description">Saldo de moedas</string>
@@ -24,14 +27,16 @@
     <string name="home_help_goals_description">Toque em um objetivo para concluí-lo e role para visualizar os demais.</string>
     <string name="home_help_footer_title">Navegação inferior</string>
     <string name="home_help_footer_description">Acesse Início, Avatar, Loja e Mais.</string>
-    <string name="home_pending_single">1 objetivo aguarda você</string>
-    <string name="home_pending_many">%1$d objetivos aguardam você</string>
-    <string name="home_notification_description">Notificação de objetivos pendentes</string>
-    <string name="home_dismiss_notification">Dispensar notificação</string>
     <string name="home_notifications_title">Notificações</string>
     <string name="home_notifications_empty">Nenhuma notificação pendente.</string>
-    <string name="home_notifications_count">%1$d notificações pendentes</string>
-    <string name="home_goals_progress">%1$d de %2$d concluídos</string>
+    <plurals name="home_notifications_count">
+        <item quantity="one">%1$d notificação pendente</item>
+        <item quantity="other">%1$d notificações pendentes</item>
+    </plurals>
+    <plurals name="home_goals_progress">
+        <item quantity="one">%1$d de %2$d concluído</item>
+        <item quantity="other">%1$d de %2$d concluídos</item>
+    </plurals>
     <string name="home_empty_goals">Sua jornada começa com um pequeno objetivo.</string>
     <string name="home_add_goal">Adicionar objetivo</string>
     <string name="home_complete_goal">Concluir %1$s</string>
@@ -39,12 +44,17 @@
     <string name="home_nav_avatar">Avatar</string>
     <string name="home_nav_store">Loja</string>
     <string name="home_nav_more">Mais</string>
-    <string name="home_scene_description">Cenário do objetivo principal</string>
-    <string name="home_scene_progress_description">Cenário do objetivo principal, estágio %1$d de %2$d, maior sequência de %3$d dias</string>
+    <string name="home_scene_progress_description">Cenário do objetivo principal, estágio %1$d de %2$d, maior sequência de %3$s</string>
     <string name="home_scene_stage">Cenário %1$d/%2$d</string>
-    <string name="home_scene_next_stage">Próximo em %1$d dias</string>
+    <plurals name="home_scene_next_stage">
+        <item quantity="one">Próximo em %1$d dia</item>
+        <item quantity="other">Próximo em %1$d dias</item>
+    </plurals>
     <string name="home_scene_season_title">Título: %1$s</string>
-    <string name="home_scene_season_bonus">Bônus em %1$d dias</string>
+    <plurals name="home_scene_season_bonus">
+        <item quantity="one">Bônus em %1$d dia</item>
+        <item quantity="other">Bônus em %1$d dias</item>
+    </plurals>
     <string name="season_title_study">Mestre do Conhecimento</string>
     <string name="season_title_food">Guardião da Horta</string>
     <string name="season_title_exercise">Atleta Incansável</string>
@@ -56,5 +66,8 @@
     <string name="bonus_mission_reward">+20 XP · +10 moedas</string>
     <string name="bonus_mission_action">Fazer</string>
     <string name="streak_recovery_title">Recuperar sequência</string>
-    <string name="streak_recovery_description">Use uma recuperação hoje · %1$d restantes no mês</string>
+    <plurals name="streak_recovery_description">
+        <item quantity="one">Use uma recuperação hoje · %1$d restante no mês</item>
+        <item quantity="other">Use uma recuperação hoje · %1$d restantes no mês</item>
+    </plurals>
 </resources>
