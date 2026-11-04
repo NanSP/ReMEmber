@@ -1,20 +1,64 @@
 package com.example.remember
 
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.example.remember.app.RememberMeApp
+import com.example.remember.feature.goals.domain.model.GoalCategory
 import com.example.remember.ui.theme.ReMEmberTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val isDebuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        val scenePreviewStreak = if (isDebuggable) {
+            intent.getIntExtra(EXTRA_SCENE_PREVIEW_STREAK, -1).takeIf { it >= 0 }
+        } else {
+            null
+        }
+        val scenePreviewCategory = if (isDebuggable) {
+            intent.getStringExtra(EXTRA_SCENE_PREVIEW_CATEGORY)?.let { value ->
+                runCatching { GoalCategory.valueOf(value) }.getOrNull()
+            }
+        } else {
+            null
+        }
+        val initialPageName = if (isDebuggable) {
+            intent.getStringExtra(EXTRA_INITIAL_PAGE)
+        } else {
+            null
+        }
+        val initialAvatarGroupName = if (isDebuggable) {
+            intent.getStringExtra(EXTRA_INITIAL_AVATAR_GROUP)
+        } else {
+            null
+        }
+        val storeTestAction = if (isDebuggable) {
+            intent.getStringExtra(EXTRA_STORE_TEST_ACTION)
+        } else {
+            null
+        }
         setContent {
             ReMEmberTheme {
-                RememberMeApp()
+                RememberMeApp(
+                    scenePreviewStreak = scenePreviewStreak,
+                    scenePreviewCategory = scenePreviewCategory,
+                    initialPageName = initialPageName,
+                    initialAvatarGroupName = initialAvatarGroupName,
+                    storeTestAction = storeTestAction
+                )
             }
         }
+    }
+
+    private companion object {
+        const val EXTRA_SCENE_PREVIEW_STREAK = "scene_preview_streak"
+        const val EXTRA_SCENE_PREVIEW_CATEGORY = "scene_preview_category"
+        const val EXTRA_INITIAL_PAGE = "initial_page"
+        const val EXTRA_INITIAL_AVATAR_GROUP = "initial_avatar_group"
+        const val EXTRA_STORE_TEST_ACTION = "store_test_action"
     }
 }

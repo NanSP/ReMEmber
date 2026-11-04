@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- A copa larga cobre todo o topo da cabeça e do cabelo. -->
+    <path d="M318 286 Q300 158 410 148 L614 148 Q724 158 706 286Z"
+      fill="#4b5367" data-color="HAT" stroke="#292833" stroke-width="16"/>
+    <!-- A faixa opaca esconde a união entre a copa, o cabelo e a aba. -->
+    <path d="M310 255 Q512 285 714 255 L716 298 Q512 330 308 298Z"
+      fill="#292833"/>
+    <!-- A aba ultrapassa as laterais da cabeça em todos os formatos de rosto. -->
+    <path d="M268 286 Q512 342 756 286 Q512 374 268 286Z"
+      fill="#4b5367" data-color="HAT" stroke="#292833" stroke-width="16"/>
+  </g>
+</svg>

@@ -1,5 +1,6 @@
 <resources>
     <string name="home_focus_description">Selecionar objetivo principal</string>
+    <string name="home_focus_lock_status">Nova troca disponível em %1$d dias</string>
     <string name="home_focus_label">Foco</string>
     <string name="home_streak_description">Sequência atual</string>
     <string name="home_coins_description">Saldo de moedas</string>
@@ -18,7 +19,7 @@
     <string name="home_help_notifications_title">Notificações</string>
     <string name="home_help_notifications_description">O círculo mostra quantos objetivos pendentes precisam de atenção.</string>
     <string name="home_help_scene_title">Cenário e avatar</string>
-    <string name="home_help_scene_description">Representação visual do seu foco e da sua evolução.</string>
+    <string name="home_help_scene_description">O cenário evolui conforme sua maior sequência. Ao concluir oito estágios, você desbloqueia um título e bônus recorrentes.</string>
     <string name="home_help_goals_title">Objetivos de hoje</string>
     <string name="home_help_goals_description">Toque em um objetivo para concluí-lo e role para visualizar os demais.</string>
     <string name="home_help_footer_title">Navegação inferior</string>
@@ -39,4 +40,13 @@
     <string name="home_nav_store">Loja</string>
     <string name="home_nav_more">Mais</string>
     <string name="home_scene_description">Cenário do objetivo principal</string>
+    <string name="home_scene_progress_description">Cenário do objetivo principal, estágio %1$d de %2$d, maior sequência de %3$d dias</string>
+    <string name="home_scene_stage">Cenário %1$d/%2$d</string>
+    <string name="home_scene_next_stage">Próximo em %1$d dias</string>
+    <string name="home_scene_season_title">Título: %1$s</string>
+    <string name="home_scene_season_bonus">Bônus em %1$d dias</string>
+    <string name="season_title_study">Mestre do Conhecimento</string>
+    <string name="season_title_food">Guardião da Horta</string>
+    <string name="season_title_exercise">Atleta Incansável</string>
+    <string name="season_title_tasks">Mestre da Organização</string>
 </resources>

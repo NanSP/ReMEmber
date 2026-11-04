@@ -1,114 +1,34 @@
 package com.example.remember.feature.avatar.data
 
-import com.example.remember.feature.avatar.domain.model.AvatarBodyType
+import com.example.remember.R
 import com.example.remember.feature.avatar.domain.model.AvatarConfiguration
 import com.example.remember.feature.avatar.domain.model.AvatarItem
 import com.example.remember.feature.avatar.domain.model.AvatarSlot
 
 object AvatarCatalog {
+    private const val ROOT = "avatar_studio"
+
     private val renderOrder = listOf(
         AvatarSlot.BODY,
-        AvatarSlot.PANTS,
-        AvatarSlot.SHOES,
-        AvatarSlot.TOP,
         AvatarSlot.FACE,
         AvatarSlot.EYES,
-        AvatarSlot.EXPRESSION,
-        AvatarSlot.FACIAL_DETAIL,
+        AvatarSlot.BEARD,
         AvatarSlot.HAIR,
-        AvatarSlot.EARRINGS,
         AvatarSlot.GLASSES,
-        AvatarSlot.SCARF,
-        AvatarSlot.WATCH,
-        AvatarSlot.HAT,
-        AvatarSlot.SPECIAL_ITEM
+        AvatarSlot.SHIRT,
+        AvatarSlot.HAT
     )
 
-    val items = listOf(
-        AvatarItem(
-            id = "body_slim",
-            slot = AvatarSlot.BODY,
-            assetPath = "avatar/corpo/03_corpo_magro.svg"
-        ),
-        AvatarItem(
-            id = "body_wide",
-            slot = AvatarSlot.BODY,
-            assetPath = "avatar/corpo/03_corpo_largo.svg"
-        ),
-        AvatarItem(
-            id = "body_medium",
-            slot = AvatarSlot.BODY,
-            assetPath = "avatar/corpo/03_corpo_medio.svg",
-            unlockedByDefault = true
-        ),
-        AvatarItem(
-            id = "pants_jeans",
-            slot = AvatarSlot.PANTS,
-            assetPath = "avatar/calca/14_calca_jeans.svg",
-            unlockedByDefault = true
-        ),
-        AvatarItem(
-            id = "shoes_sneakers",
-            slot = AvatarSlot.SHOES,
-            assetPath = "avatar/calcado/15_calcado_tenis.svg",
-            unlockedByDefault = true
-        ),
-        AvatarItem(
-            id = "top_tshirt",
-            slot = AvatarSlot.TOP,
-            assetPath = "avatar/roupa/13_roupa_camiseta.svg",
-            unlockedByDefault = true
-        ),
-        AvatarItem(
-            id = "face_base",
-            slot = AvatarSlot.FACE,
-            assetPath = "avatar/01_rosto_base.svg",
-            unlockedByDefault = true
-        ),
-        AvatarItem(
-            id = "eyes_01",
-            slot = AvatarSlot.EYES,
-            assetPath = "avatar/olhos/04_olhos_cor_01.svg",
-            unlockedByDefault = true
-        ),
-        AvatarItem(
-            id = "expression_happy",
-            slot = AvatarSlot.EXPRESSION,
-            assetPath = "avatar/expressao/05_expressao_feliz.svg",
-            unlockedByDefault = true
-        ),
-        AvatarItem(
-            id = "hair_curly",
-            slot = AvatarSlot.HAIR,
-            assetPath = "avatar/cabelos/07_cabelo_cacheado.svg",
-            unlockedByDefault = true
-        ),
-        AvatarItem(
-            id = "hair_bangs",
-            slot = AvatarSlot.HAIR,
-            assetPath = "avatar/cabelos/07_cabelo_franja.svg"
-        ),
-        AvatarItem(
-            id = "hair_long",
-            slot = AvatarSlot.HAIR,
-            assetPath = "avatar/cabelos/07_cabelo_longo.svg"
-        ),
-        AvatarItem(
-            id = "top_hoodie",
-            slot = AvatarSlot.TOP,
-            assetPath = "avatar/roupa/13_roupa_moletom.svg"
-        ),
-        AvatarItem(
-            id = "top_jacket",
-            slot = AvatarSlot.TOP,
-            assetPath = "avatar/roupa/13_roupa_jaqueta.svg"
-        ),
-        AvatarItem(
-            id = "glasses_round",
-            slot = AvatarSlot.GLASSES,
-            assetPath = "avatar/oculos/09_oculos_redondo.svg"
-        )
-    )
+    val items: List<AvatarItem> = buildList {
+        addNumbered(AvatarSlot.BODY, "body", bodyLabels(), defaultIndex = 3)
+        addNumbered(AvatarSlot.FACE, "face", faceLabels(), defaultIndex = 1)
+        addNumbered(AvatarSlot.EYES, "eyes", eyesLabels(), defaultIndex = 1)
+        addNumbered(AvatarSlot.BEARD, "beard", beardLabels(), defaultIndex = 2)
+        addNumbered(AvatarSlot.HAIR, "hair", hairLabels(), defaultIndex = 1)
+        addNumbered(AvatarSlot.GLASSES, "glasses", glassesLabels(), defaultIndex = 1)
+        addNumbered(AvatarSlot.SHIRT, "shirt", shirtLabels(), defaultIndex = 1)
+        addNumbered(AvatarSlot.HAT, "hat", hatLabels(), defaultIndex = 1)
+    }
 
     val defaultConfiguration = AvatarConfiguration(
         equippedItemIds = items
@@ -116,25 +36,100 @@ object AvatarCatalog {
             .associate { it.slot to it.id }
     )
 
-    fun resolve(configuration: AvatarConfiguration): List<AvatarItem> {
-        val byId = items.associateBy(AvatarItem::id)
-        return renderOrder.mapNotNull { slot ->
-            configuration.equippedItemIds[slot]?.let(byId::get)
+    private val itemsById = items.associateBy(AvatarItem::id)
+
+    fun resolve(configuration: AvatarConfiguration): List<AvatarItem> = renderOrder.mapNotNull { slot ->
+        configuration.equippedItemIds[slot]?.let(itemsById::get)
+    }
+
+    fun itemsFor(slot: AvatarSlot): List<AvatarItem> = items.filter { it.slot == slot }
+
+    fun contains(slot: AvatarSlot, itemId: String): Boolean = itemsById[itemId]?.slot == slot
+
+    private fun MutableList<AvatarItem>.addNumbered(
+        slot: AvatarSlot,
+        folder: String,
+        labels: List<Int>,
+        defaultIndex: Int
+    ) {
+        labels.forEachIndexed { zeroBasedIndex, labelRes ->
+            val index = zeroBasedIndex + 1
+            val number = index.toString().padStart(2, '0')
+            add(
+                AvatarItem(
+                    id = "${folder}_$number",
+                    slot = slot,
+                    assetPath = "$ROOT/$folder/$number.svg",
+                    labelRes = labelRes,
+                    unlockedByDefault = index == defaultIndex
+                )
+            )
         }
     }
 
-    fun assetPathFor(item: AvatarItem, configuration: AvatarConfiguration): String {
-        if (item.slot != AvatarSlot.TOP || item.id !in tailoredTopIds) return item.assetPath
-        val bodyId = configuration.equippedItemIds[AvatarSlot.BODY]
-        val folder = AvatarBodyType.fromItemId(bodyId).tailoredTopFolder
-            ?: return item.assetPath
-        val baseName = item.assetPath.substringAfterLast('/').substringBeforeLast(".svg")
-        return "avatar/roupa/$folder/${baseName}_alinhada.svg"
-    }
-
-    private val tailoredTopIds = setOf(
-        "top_tshirt",
-        "top_hoodie",
-        "top_jacket"
+    private fun bodyLabels() = listOf(
+        R.string.avatar_body_classic,
+        R.string.avatar_body_athletic,
+        R.string.avatar_body_wide
+    )
+    private fun faceLabels() = listOf(
+        R.string.avatar_face_round,
+        R.string.avatar_face_oval,
+        R.string.avatar_face_square
+    )
+    private fun eyesLabels() = listOf(
+        R.string.avatar_eyes_curious,
+        R.string.avatar_eyes_happy,
+        R.string.avatar_eyes_surprised,
+        R.string.avatar_eyes_relaxed,
+        R.string.avatar_eyes_smiling,
+        R.string.avatar_eyes_calm
+    )
+    private fun hairLabels() = listOf(
+        R.string.avatar_hair_curls,
+        R.string.avatar_hair_wavy,
+        R.string.avatar_hair_punk,
+        R.string.avatar_hair_voluminous,
+        R.string.avatar_hair_short,
+        R.string.avatar_hair_coily,
+        R.string.avatar_hair_side,
+        R.string.avatar_hair_shaggy,
+        R.string.avatar_hair_stylized,
+        R.string.avatar_hair_social,
+        R.string.avatar_hair_long_layered,
+        R.string.avatar_hair_bob_cut,
+        R.string.avatar_hair_ponytail,
+        R.string.avatar_hair_high_bun,
+        R.string.avatar_hair_braids
+    )
+    private fun beardLabels() = listOf(
+        R.string.avatar_none,
+        R.string.avatar_beard_goatee,
+        R.string.avatar_beard_full,
+        R.string.avatar_beard_mustache,
+        R.string.avatar_beard_outline,
+        R.string.avatar_beard_chin
+    )
+    private fun glassesLabels() = listOf(
+        R.string.avatar_glasses_none,
+        R.string.avatar_glasses_round,
+        R.string.avatar_glasses_square,
+        R.string.avatar_glasses_sun
+    )
+    private fun shirtLabels() = listOf(
+        R.string.avatar_shirt_basic,
+        R.string.avatar_shirt_button,
+        R.string.avatar_shirt_striped,
+        R.string.avatar_shirt_print,
+        R.string.avatar_shirt_suit,
+        R.string.avatar_shirt_tank,
+        R.string.avatar_shirt_hoodie,
+        R.string.avatar_shirt_turtleneck
+    )
+    private fun hatLabels() = listOf(
+        R.string.avatar_hat_none,
+        R.string.avatar_hat_cap,
+        R.string.avatar_hat_witch,
+        R.string.avatar_hat_fedora
     )
 }

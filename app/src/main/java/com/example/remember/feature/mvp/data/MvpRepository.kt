@@ -1,6 +1,7 @@
 package com.example.remember.feature.mvp.data
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -8,21 +9,44 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.remember.feature.avatar.data.AvatarCatalog
+import com.example.remember.feature.avatar.domain.model.AvatarSlot
 import com.example.remember.feature.goals.domain.model.GoalCategory
+import com.example.remember.feature.mvp.domain.CategoryHistory
+import com.example.remember.feature.mvp.domain.GoalRecurrence
 import com.example.remember.feature.mvp.domain.MvpGoal
 import com.example.remember.feature.mvp.domain.MvpState
+import com.example.remember.feature.mvp.domain.PrimaryCategoryRules
 import com.example.remember.feature.mvp.domain.RewardRules
+import com.example.remember.feature.store.data.StoreCatalog
+import com.example.remember.feature.store.data.StorePurchaseResult
 import java.io.IOException
-import java.nio.charset.StandardCharsets
-import java.time.LocalDate
-import java.util.Base64
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.mvpDataStore by preferencesDataStore(name = "remember_mvp")
 
-class MvpRepository(private val context: Context) {
+enum class PrimaryCategoryChangeStatus { CHANGED, ALREADY_SELECTED, LOCKED }
+
+data class PrimaryCategoryChangeResult(
+    val status: PrimaryCategoryChangeStatus,
+    val daysRemaining: Int = 0
+)
+
+data class ReminderSnapshot(
+    val goal: MvpGoal,
+    val soundEnabled: Boolean,
+    val vibrationEnabled: Boolean
+)
+
+class MvpRepository(
+    private val context: Context,
+    private val currentEpochDay: () -> Long = DeviceDayProvider::currentEpochDay
+) {
+    private val reminderScheduler = GoalReminderScheduler(context)
+
     val state: Flow<MvpState> = context.mvpDataStore.data
         .catch { error ->
             if (error is IOException) emit(androidx.datastore.preferences.core.emptyPreferences())
@@ -39,57 +63,164 @@ class MvpRepository(private val context: Context) {
             preferences[Keys.PROFILE_NAME] = name.trim()
             preferences[Keys.PRIMARY_CATEGORY] = primaryCategory.name
             preferences[Keys.SELECTED_BODY] = bodyItemId
+            if (preferences[Keys.PRIMARY_CATEGORY_CHANGED_DAY] == null) {
+                preferences[Keys.PRIMARY_CATEGORY_CHANGED_DAY] = currentEpochDay()
+            }
+            if (preferences[Keys.CATEGORY_HISTORY] == null) {
+                preferences[Keys.CATEGORY_HISTORY] = encodeCategoryHistories(
+                    GoalCategory.entries.associateWith(::CategoryHistory)
+                )
+            }
         }
     }
 
-    suspend fun addGoal(title: String, category: GoalCategory) {
+    suspend fun addGoal(
+        title: String,
+        category: GoalCategory,
+        recurrence: GoalRecurrence = GoalRecurrence.NONE,
+        reminderMinutesOfDay: Int? = null
+    ) {
         if (title.isBlank()) return
+        var createdGoal: MvpGoal? = null
         context.mvpDataStore.edit { preferences ->
             val goals = decodeGoals(preferences[Keys.GOALS]).toMutableList()
-            goals += MvpGoal(
+            createdGoal = MvpGoal(
                 id = System.currentTimeMillis(),
                 title = title.trim(),
-                category = category
+                category = category,
+                recurrence = recurrence,
+                reminderMinutesOfDay = reminderMinutesOfDay,
+                reminderEnabled = reminderMinutesOfDay != null
             )
+            goals += checkNotNull(createdGoal)
             preferences[Keys.GOALS] = encodeGoals(goals)
         }
+        createdGoal?.let(reminderScheduler::sync)
     }
 
-    suspend fun setPrimaryCategory(category: GoalCategory) {
+    suspend fun updateGoal(
+        goalId: Long,
+        title: String,
+        category: GoalCategory,
+        recurrence: GoalRecurrence,
+        reminderMinutesOfDay: Int?
+    ) {
+        if (title.isBlank()) return
+        var updatedGoal: MvpGoal? = null
         context.mvpDataStore.edit { preferences ->
-            preferences[Keys.PRIMARY_CATEGORY] = category.name
+            val goals = decodeGoals(preferences[Keys.GOALS])
+            val existing = goals.firstOrNull { it.id == goalId } ?: return@edit
+            updatedGoal = existing.copy(
+                title = title.trim(),
+                category = category,
+                recurrence = recurrence,
+                reminderMinutesOfDay = reminderMinutesOfDay,
+                reminderEnabled = reminderMinutesOfDay != null
+            )
+            preferences[Keys.GOALS] = encodeGoals(
+                goals.map { if (it.id == goalId) checkNotNull(updatedGoal) else it }
+            )
         }
+        updatedGoal?.let(reminderScheduler::sync)
+    }
+
+    suspend fun setPrimaryCategory(category: GoalCategory): PrimaryCategoryChangeResult {
+        var result = PrimaryCategoryChangeResult(PrimaryCategoryChangeStatus.ALREADY_SELECTED)
+        context.mvpDataStore.edit { preferences ->
+            val currentCategory = preferences.category(Keys.PRIMARY_CATEGORY)
+            if (currentCategory == category) return@edit
+            val today = currentEpochDay()
+            val daysRemaining = PrimaryCategoryRules.daysUntilChange(
+                lastChangeDay = preferences[Keys.PRIMARY_CATEGORY_CHANGED_DAY],
+                currentDay = today
+            )
+            if (daysRemaining > 0) {
+                result = PrimaryCategoryChangeResult(
+                    status = PrimaryCategoryChangeStatus.LOCKED,
+                    daysRemaining = daysRemaining
+                )
+                return@edit
+            }
+            val histories = decodeCategoryHistories(preferences)
+            val history = histories.getValue(category)
+            preferences[Keys.CATEGORY_HISTORY] = encodeCategoryHistories(histories)
+            preferences[Keys.PRIMARY_CATEGORY] = category.name
+            preferences[Keys.PRIMARY_CATEGORY_CHANGED_DAY] = today
+            preferences[Keys.CURRENT_STREAK] = history.currentStreak
+            preferences[Keys.LONGEST_STREAK] = history.longestStreak
+            preferences[Keys.LAST_PRIMARY_COMPLETION_DAY] = history.lastPrimaryCompletionDay
+            result = PrimaryCategoryChangeResult(PrimaryCategoryChangeStatus.CHANGED)
+        }
+        return result
     }
 
     suspend fun completeGoal(goalId: Long) {
+        var completedGoal: MvpGoal? = null
         context.mvpDataStore.edit { preferences ->
             val goals = decodeGoals(preferences[Keys.GOALS])
             val goal = goals.firstOrNull { it.id == goalId } ?: return@edit
-            if (goal.isCompleted) return@edit
+            val today = currentEpochDay()
+            if (goal.isCompletedAt(today)) return@edit
 
             val primaryCategory = preferences.category(Keys.PRIMARY_CATEGORY)
-            val reward = RewardRules.completionReward(goal.category, primaryCategory)
-            val today = LocalDate.now().toEpochDay()
-            val currentStreak = preferences[Keys.CURRENT_STREAK] ?: 0
-            val nextStreak = RewardRules.nextStreak(
-                current = currentStreak,
-                lastCompletionDay = preferences[Keys.LAST_COMPLETION_DAY] ?: Long.MIN_VALUE,
+            val histories = decodeCategoryHistories(preferences).toMutableMap()
+            val primaryHistory = histories.getValue(primaryCategory)
+            val lastPrimaryCompletionDay = primaryHistory.lastPrimaryCompletionDay
+            val isFirstPrimaryCompletionToday = RewardRules.isFirstPrimaryCompletionToday(
+                category = goal.category,
+                primaryCategory = primaryCategory,
+                lastPrimaryCompletionDay = lastPrimaryCompletionDay,
                 currentDay = today
             )
+            val reward = RewardRules.completionReward(
+                category = goal.category,
+                primaryCategory = primaryCategory,
+                isFirstPrimaryCompletionToday = isFirstPrimaryCompletionToday
+            )
+            val previousLongestStreak = primaryHistory.longestStreak
+            var experienceEarned = reward.experience
+            var coinsEarned = reward.coins
+            var updatedHistory = histories.getValue(goal.category).let { history ->
+                history.copy(totalCompletions = history.totalCompletions + 1)
+            }
 
+            completedGoal = goal.copy(
+                isCompleted = true,
+                lastCompletedEpochDay = today
+            )
             preferences[Keys.GOALS] = encodeGoals(
-                goals.map { if (it.id == goalId) it.copy(isCompleted = true) else it }
+                goals.map { if (it.id == goalId) checkNotNull(completedGoal) else it }
             )
-            preferences[Keys.EXPERIENCE] = (preferences[Keys.EXPERIENCE] ?: 0) + reward.experience
-            preferences[Keys.COINS] = (preferences[Keys.COINS] ?: 0) + reward.coins
             preferences[Keys.TOTAL_COMPLETIONS] = (preferences[Keys.TOTAL_COMPLETIONS] ?: 0) + 1
-            preferences[Keys.CURRENT_STREAK] = nextStreak
-            preferences[Keys.LONGEST_STREAK] = maxOf(
-                preferences[Keys.LONGEST_STREAK] ?: 0,
-                nextStreak
-            )
-            preferences[Keys.LAST_COMPLETION_DAY] = today
+            if (isFirstPrimaryCompletionToday) {
+                val nextStreak = RewardRules.nextStreak(
+                    current = primaryHistory.currentStreak,
+                    lastCompletionDay = lastPrimaryCompletionDay,
+                    currentDay = today
+                )
+                val newLongestStreak = maxOf(previousLongestStreak, nextStreak)
+                val seasonReward = RewardRules.seasonReward(
+                    previousLongestStreak = previousLongestStreak,
+                    newLongestStreak = newLongestStreak
+                )
+                experienceEarned += seasonReward.experience
+                coinsEarned += seasonReward.coins
+                updatedHistory = updatedHistory.copy(
+                    currentStreak = nextStreak,
+                    longestStreak = newLongestStreak,
+                    lastPrimaryCompletionDay = today
+                )
+                preferences[Keys.CURRENT_STREAK] = nextStreak
+                preferences[Keys.LONGEST_STREAK] = newLongestStreak
+                preferences[Keys.LAST_PRIMARY_COMPLETION_DAY] = today
+            }
+            histories[goal.category] = updatedHistory
+            preferences[Keys.CATEGORY_HISTORY] = encodeCategoryHistories(histories)
+            preferences[Keys.EXPERIENCE] =
+                (preferences[Keys.EXPERIENCE] ?: 0) + experienceEarned
+            preferences[Keys.COINS] = (preferences[Keys.COINS] ?: 0) + coinsEarned
         }
+        completedGoal?.let(reminderScheduler::sync)
     }
 
     suspend fun deleteGoal(goalId: Long) {
@@ -97,20 +228,126 @@ class MvpRepository(private val context: Context) {
             val goals = decodeGoals(preferences[Keys.GOALS]).filterNot { it.id == goalId }
             preferences[Keys.GOALS] = encodeGoals(goals)
         }
+        reminderScheduler.cancel(goalId)
+    }
+
+    suspend fun purchaseBundle(bundleId: String): StorePurchaseResult {
+        val bundle = StoreCatalog.find(bundleId) ?: return StorePurchaseResult.UNKNOWN_BUNDLE
+        var result = StorePurchaseResult.UNKNOWN_BUNDLE
+        context.mvpDataStore.edit { preferences ->
+            val owned = decodeIdSet(preferences[Keys.OWNED_BUNDLES])
+            val coins = preferences[Keys.COINS] ?: 0
+            result = when {
+                bundle.id in owned -> StorePurchaseResult.ALREADY_OWNED
+                coins < bundle.price -> StorePurchaseResult.INSUFFICIENT_COINS
+                else -> {
+                    preferences[Keys.COINS] = coins - bundle.price
+                    preferences[Keys.OWNED_BUNDLES] = encodeIdSet(owned + bundle.id)
+                    StorePurchaseResult.PURCHASED
+                }
+            }
+        }
+        return result
+    }
+
+    suspend fun equipBundle(bundleId: String): Boolean {
+        val bundle = StoreCatalog.find(bundleId) ?: return false
+        var equipped = false
+        context.mvpDataStore.edit { preferences ->
+            if (bundle.id !in decodeIdSet(preferences[Keys.OWNED_BUNDLES])) return@edit
+            bundle.equippedItemIds[AvatarSlot.HAIR]?.let { preferences[Keys.SELECTED_HAIR] = it }
+            bundle.equippedItemIds[AvatarSlot.GLASSES]?.let { preferences[Keys.SELECTED_GLASSES] = it }
+            bundle.equippedItemIds[AvatarSlot.SHIRT]?.let { preferences[Keys.SELECTED_SHIRT] = it }
+            bundle.equippedItemIds[AvatarSlot.HAT]?.let { preferences[Keys.SELECTED_HAT] = it }
+            preferences[Keys.AVATAR_HAIR_COLOR] = bundle.hairColor
+            preferences[Keys.AVATAR_SHIRT_COLOR] = bundle.shirtColor
+            preferences[Keys.AVATAR_GLASSES_COLOR] = bundle.glassesColor
+            preferences[Keys.AVATAR_HAT_COLOR] = bundle.hatColor
+            equipped = true
+        }
+        return equipped
+    }
+
+    suspend fun beginStorePurchaseTest() {
+        if (!context.isDebuggable()) return
+        context.mvpDataStore.edit { preferences ->
+            if (preferences[Keys.DEBUG_STORE_TEST_ACTIVE] == true) return@edit
+            preferences[Keys.DEBUG_STORE_TEST_ACTIVE] = true
+            preferences[Keys.DEBUG_ORIGINAL_COINS] = preferences[Keys.COINS] ?: 0
+            preferences[Keys.DEBUG_ORIGINAL_OWNED_BUNDLES] = preferences[Keys.OWNED_BUNDLES].orEmpty()
+            preferences[Keys.DEBUG_ORIGINAL_SELECTED_HAIR] = preferences[Keys.SELECTED_HAIR] ?: "hair_01"
+            preferences[Keys.DEBUG_ORIGINAL_SELECTED_GLASSES] = preferences[Keys.SELECTED_GLASSES] ?: "glasses_01"
+            preferences[Keys.DEBUG_ORIGINAL_SELECTED_SHIRT] = preferences[Keys.SELECTED_SHIRT] ?: "shirt_01"
+            preferences[Keys.DEBUG_ORIGINAL_SELECTED_HAT] = preferences[Keys.SELECTED_HAT] ?: "hat_01"
+            preferences[Keys.DEBUG_ORIGINAL_HAIR_COLOR] = preferences[Keys.AVATAR_HAIR_COLOR] ?: "#29232A"
+            preferences[Keys.DEBUG_ORIGINAL_SHIRT_COLOR] = preferences[Keys.AVATAR_SHIRT_COLOR] ?: "#4FA6D4"
+            preferences[Keys.DEBUG_ORIGINAL_GLASSES_COLOR] = preferences[Keys.AVATAR_GLASSES_COLOR] ?: "#30333E"
+            preferences[Keys.DEBUG_ORIGINAL_HAT_COLOR] = preferences[Keys.AVATAR_HAT_COLOR] ?: "#4B5367"
+            preferences[Keys.COINS] = STORE_TEST_COINS
+            preferences[Keys.OWNED_BUNDLES] = ""
+        }
+    }
+
+    suspend fun finishStorePurchaseTest() {
+        if (!context.isDebuggable()) return
+        context.mvpDataStore.edit { preferences ->
+            if (preferences[Keys.DEBUG_STORE_TEST_ACTIVE] != true) return@edit
+            preferences[Keys.COINS] = preferences[Keys.DEBUG_ORIGINAL_COINS] ?: 0
+            preferences[Keys.OWNED_BUNDLES] = preferences[Keys.DEBUG_ORIGINAL_OWNED_BUNDLES].orEmpty()
+            preferences[Keys.SELECTED_HAIR] = preferences[Keys.DEBUG_ORIGINAL_SELECTED_HAIR] ?: "hair_01"
+            preferences[Keys.SELECTED_GLASSES] = preferences[Keys.DEBUG_ORIGINAL_SELECTED_GLASSES] ?: "glasses_01"
+            preferences[Keys.SELECTED_SHIRT] = preferences[Keys.DEBUG_ORIGINAL_SELECTED_SHIRT] ?: "shirt_01"
+            preferences[Keys.SELECTED_HAT] = preferences[Keys.DEBUG_ORIGINAL_SELECTED_HAT] ?: "hat_01"
+            preferences[Keys.AVATAR_HAIR_COLOR] = preferences[Keys.DEBUG_ORIGINAL_HAIR_COLOR] ?: "#29232A"
+            preferences[Keys.AVATAR_SHIRT_COLOR] = preferences[Keys.DEBUG_ORIGINAL_SHIRT_COLOR] ?: "#4FA6D4"
+            preferences[Keys.AVATAR_GLASSES_COLOR] = preferences[Keys.DEBUG_ORIGINAL_GLASSES_COLOR] ?: "#30333E"
+            preferences[Keys.AVATAR_HAT_COLOR] = preferences[Keys.DEBUG_ORIGINAL_HAT_COLOR] ?: "#4B5367"
+            preferences.remove(Keys.DEBUG_STORE_TEST_ACTIVE)
+            preferences.remove(Keys.DEBUG_ORIGINAL_COINS)
+            preferences.remove(Keys.DEBUG_ORIGINAL_OWNED_BUNDLES)
+            preferences.remove(Keys.DEBUG_ORIGINAL_SELECTED_HAIR)
+            preferences.remove(Keys.DEBUG_ORIGINAL_SELECTED_GLASSES)
+            preferences.remove(Keys.DEBUG_ORIGINAL_SELECTED_SHIRT)
+            preferences.remove(Keys.DEBUG_ORIGINAL_SELECTED_HAT)
+            preferences.remove(Keys.DEBUG_ORIGINAL_HAIR_COLOR)
+            preferences.remove(Keys.DEBUG_ORIGINAL_SHIRT_COLOR)
+            preferences.remove(Keys.DEBUG_ORIGINAL_GLASSES_COLOR)
+            preferences.remove(Keys.DEBUG_ORIGINAL_HAT_COLOR)
+        }
     }
 
     suspend fun selectAvatarItem(slot: AvatarSelection, itemId: String) {
         context.mvpDataStore.edit { preferences ->
+            val avatarSlot = slot.toAvatarSlot()
+            val ownedBundles = decodeIdSet(preferences[Keys.OWNED_BUNDLES])
+            if (!AvatarCatalog.contains(avatarSlot, itemId)) return@edit
+            if (!StoreCatalog.isItemUnlocked(itemId, ownedBundles)) return@edit
             preferences[when (slot) {
                 AvatarSelection.BODY -> Keys.SELECTED_BODY
+                AvatarSelection.FACE -> Keys.SELECTED_FACE
+                AvatarSelection.EYES -> Keys.SELECTED_EYES
+                AvatarSelection.BEARD -> Keys.SELECTED_BEARD
                 AvatarSelection.HAIR -> Keys.SELECTED_HAIR
-                AvatarSelection.TOP -> Keys.SELECTED_TOP
+                AvatarSelection.GLASSES -> Keys.SELECTED_GLASSES
+                AvatarSelection.SHIRT -> Keys.SELECTED_SHIRT
+                AvatarSelection.HAT -> Keys.SELECTED_HAT
             }] = itemId
         }
     }
 
-    suspend fun setRoundGlasses(enabled: Boolean) {
-        context.mvpDataStore.edit { it[Keys.ROUND_GLASSES] = enabled }
+    suspend fun selectAvatarColor(target: AvatarColorSelection, color: String) {
+        if (!HEX_COLOR.matches(color)) return
+        context.mvpDataStore.edit { preferences ->
+            preferences[when (target) {
+                AvatarColorSelection.SKIN -> Keys.AVATAR_SKIN_COLOR
+                AvatarColorSelection.HAIR -> Keys.AVATAR_HAIR_COLOR
+                AvatarColorSelection.EYES -> Keys.AVATAR_EYE_COLOR
+                AvatarColorSelection.SHIRT -> Keys.AVATAR_SHIRT_COLOR
+                AvatarColorSelection.BEARD -> Keys.AVATAR_BEARD_COLOR
+                AvatarColorSelection.GLASSES -> Keys.AVATAR_GLASSES_COLOR
+                AvatarColorSelection.HAT -> Keys.AVATAR_HAT_COLOR
+            }] = color.uppercase()
+        }
     }
 
     suspend fun setSoundEnabled(enabled: Boolean) {
@@ -121,63 +358,216 @@ class MvpRepository(private val context: Context) {
         context.mvpDataStore.edit { it[Keys.VIBRATION_ENABLED] = enabled }
     }
 
-    private fun decodeState(preferences: Preferences) = MvpState(
+    suspend fun rescheduleReminders() {
+        val preferences = context.mvpDataStore.data.first()
+        decodeGoals(preferences[Keys.GOALS]).forEach(reminderScheduler::sync)
+    }
+
+    suspend fun reminderSnapshot(goalId: Long): ReminderSnapshot? {
+        val preferences = context.mvpDataStore.data.first()
+        val goal = decodeGoals(preferences[Keys.GOALS])
+            .firstOrNull { it.id == goalId && it.reminderEnabled }
+            ?: return null
+        if (goal.isCompletedAt(currentEpochDay())) return null
+        return ReminderSnapshot(
+            goal = goal,
+            soundEnabled = preferences[Keys.SOUND_ENABLED] ?: true,
+            vibrationEnabled = preferences[Keys.VIBRATION_ENABLED] ?: true
+        )
+    }
+
+    private fun decodeState(preferences: Preferences): MvpState {
+        val today = currentEpochDay()
+        val primaryCategory = preferences.category(Keys.PRIMARY_CATEGORY)
+        val histories = decodeCategoryHistories(preferences).mapValues { (_, history) ->
+            history.copy(
+                currentStreak = RewardRules.activeStreak(
+                    current = history.currentStreak,
+                    lastCompletionDay = history.lastPrimaryCompletionDay,
+                    currentDay = today
+                )
+            )
+        }
+        val primaryHistory = histories.getValue(primaryCategory)
+        return MvpState(
         profileName = preferences[Keys.PROFILE_NAME].orEmpty(),
-        primaryCategory = preferences.category(Keys.PRIMARY_CATEGORY),
-        goals = decodeGoals(preferences[Keys.GOALS]),
+        primaryCategory = primaryCategory,
+        goals = decodeGoals(preferences[Keys.GOALS]).map { it.normalizedAt(today) },
         experience = preferences[Keys.EXPERIENCE] ?: 0,
         coins = preferences[Keys.COINS] ?: 0,
-        currentStreak = preferences[Keys.CURRENT_STREAK] ?: 0,
-        longestStreak = preferences[Keys.LONGEST_STREAK] ?: 0,
+        currentStreak = primaryHistory.currentStreak,
+        longestStreak = primaryHistory.longestStreak,
         totalCompletions = preferences[Keys.TOTAL_COMPLETIONS] ?: 0,
-        selectedBodyId = preferences[Keys.SELECTED_BODY].orEmpty(),
-        selectedHairId = preferences[Keys.SELECTED_HAIR] ?: "hair_curly",
-        selectedTopId = preferences[Keys.SELECTED_TOP] ?: "top_tshirt",
-        roundGlassesEnabled = preferences[Keys.ROUND_GLASSES] ?: false,
+        categoryHistory = histories,
+        primaryCategoryChangeDaysRemaining = PrimaryCategoryRules.daysUntilChange(
+            lastChangeDay = preferences[Keys.PRIMARY_CATEGORY_CHANGED_DAY],
+            currentDay = today
+        ),
+        selectedBodyId = selection(
+            preferences,
+            Keys.SELECTED_BODY,
+            AvatarSlot.BODY,
+            "body_03",
+            mapOf(
+                "body_slim" to "body_01",
+                "body_medium" to "body_03",
+                "body_average" to "body_03",
+                "body_wide" to "body_03",
+                "body_plus" to "body_03"
+            )
+        ),
+        selectedFaceId = selection(preferences, Keys.SELECTED_FACE, AvatarSlot.FACE, "face_01"),
+        selectedEyesId = selection(
+            preferences,
+            Keys.SELECTED_EYES,
+            AvatarSlot.EYES,
+            if (preferences[Keys.SELECTED_EXPRESSION]?.contains("surpris", ignoreCase = true) == true) {
+                "eyes_03"
+            } else {
+                "eyes_01"
+            }
+        ),
+        selectedBeardId = selection(preferences, Keys.SELECTED_BEARD, AvatarSlot.BEARD, "beard_02"),
+        selectedHairId = selection(
+            preferences,
+            Keys.SELECTED_HAIR,
+            AvatarSlot.HAIR,
+            "hair_01",
+            mapOf(
+                "hair_curly" to "hair_01",
+                "hair_bangs" to "hair_08",
+                "hair_long" to "hair_04",
+                "hair_spiky_01" to "hair_03",
+                "hair_short_curly_02" to "hair_06",
+                "hair_messy_spiky" to "hair_03",
+                "hair_dreads" to "hair_06"
+            )
+        ).takeIf {
+            StoreCatalog.isItemUnlocked(it, decodeIdSet(preferences[Keys.OWNED_BUNDLES]))
+        } ?: "hair_01",
+        selectedGlassesId = selection(
+            preferences,
+            Keys.SELECTED_GLASSES,
+            AvatarSlot.GLASSES,
+            if (preferences[Keys.ROUND_GLASSES] == true) "glasses_02" else "glasses_01",
+            mapOf("glasses_round" to "glasses_02")
+        ),
+        selectedShirtId = selection(preferences, Keys.SELECTED_SHIRT, AvatarSlot.SHIRT, "shirt_01"),
+        selectedHatId = selection(
+            preferences,
+            Keys.SELECTED_HAT,
+            AvatarSlot.HAT,
+            "hat_01",
+            mapOf(
+                "hat_beanie_01" to "hat_02",
+                "hat_cap_02" to "hat_02",
+                "cap_blue" to "hat_02"
+            )
+        ).takeIf {
+            StoreCatalog.isItemUnlocked(it, decodeIdSet(preferences[Keys.OWNED_BUNDLES]))
+        } ?: "hat_01",
+        avatarSkinColor = preferences[Keys.AVATAR_SKIN_COLOR] ?: "#87513A",
+        avatarHairColor = preferences[Keys.AVATAR_HAIR_COLOR] ?: "#29232A",
+        avatarEyeColor = preferences[Keys.AVATAR_EYE_COLOR] ?: "#382E34",
+        avatarShirtColor = preferences[Keys.AVATAR_SHIRT_COLOR] ?: "#4FA6D4",
+        avatarBeardColor = preferences[Keys.AVATAR_BEARD_COLOR] ?: "#29232A",
+        avatarGlassesColor = preferences[Keys.AVATAR_GLASSES_COLOR] ?: "#30333E",
+        avatarHatColor = preferences[Keys.AVATAR_HAT_COLOR] ?: "#4B5367",
+        ownedBundleIds = decodeIdSet(preferences[Keys.OWNED_BUNDLES]),
         soundEnabled = preferences[Keys.SOUND_ENABLED] ?: true,
         vibrationEnabled = preferences[Keys.VIBRATION_ENABLED] ?: true
-    )
+        )
+    }
 
     private fun Preferences.category(key: Preferences.Key<String>): GoalCategory =
         this[key]?.let { value ->
             runCatching { GoalCategory.valueOf(value) }.getOrNull()
         } ?: GoalCategory.STUDY
 
-    private fun encodeGoals(goals: List<MvpGoal>): String = goals.joinToString(";") { goal ->
-        listOf(
-            goal.id.toString(),
-            encodeText(goal.title),
-            goal.category.name,
-            goal.isCompleted.toString()
-        ).joinToString(",")
+    private fun encodeGoals(goals: List<MvpGoal>): String = GoalCodec.encode(goals)
+
+    private fun decodeGoals(value: String?): List<MvpGoal> = GoalCodec.decode(value)
+
+    private fun encodeCategoryHistories(histories: Map<GoalCategory, CategoryHistory>): String =
+        CategoryHistoryCodec.encode(histories)
+
+    private fun decodeCategoryHistories(
+        preferences: Preferences
+    ): Map<GoalCategory, CategoryHistory> {
+        val decoded = CategoryHistoryCodec.decode(preferences[Keys.CATEGORY_HISTORY])
+        if (decoded.isNotEmpty()) {
+            return GoalCategory.entries.associateWith { category ->
+                decoded[category] ?: CategoryHistory(category)
+            }
+        }
+
+        val primaryCategory = preferences.category(Keys.PRIMARY_CATEGORY)
+        val completedByCategory = decodeGoals(preferences[Keys.GOALS])
+            .filter(MvpGoal::isCompleted)
+            .groupingBy(MvpGoal::category)
+            .eachCount()
+        return GoalCategory.entries.associateWith { category ->
+            CategoryHistory(
+                category = category,
+                currentStreak = if (category == primaryCategory) {
+                    preferences[Keys.CURRENT_STREAK] ?: 0
+                } else {
+                    0
+                },
+                longestStreak = if (category == primaryCategory) {
+                    preferences[Keys.LONGEST_STREAK] ?: 0
+                } else {
+                    0
+                },
+                totalCompletions = completedByCategory[category] ?: 0,
+                lastPrimaryCompletionDay = if (category == primaryCategory) {
+                    preferences[Keys.LAST_PRIMARY_COMPLETION_DAY]
+                        ?: preferences[Keys.LAST_COMPLETION_DAY]
+                        ?: Long.MIN_VALUE
+                } else {
+                    Long.MIN_VALUE
+                }
+            )
+        }
     }
 
-    private fun decodeGoals(value: String?): List<MvpGoal> = value
-        ?.split(';')
-        ?.mapNotNull { encodedGoal ->
-            val parts = encodedGoal.split(',')
-            if (parts.size != 4) return@mapNotNull null
-            runCatching {
-                MvpGoal(
-                    id = parts[0].toLong(),
-                    title = decodeText(parts[1]),
-                    category = GoalCategory.valueOf(parts[2]),
-                    isCompleted = parts[3].toBooleanStrict()
-                )
-            }.getOrNull()
-        }
+    private fun encodeIdSet(ids: Set<String>): String = ids.sorted().joinToString(",")
+
+    private fun decodeIdSet(value: String?): Set<String> = value
+        ?.split(',')
+        ?.filter(String::isNotBlank)
+        ?.toSet()
         .orEmpty()
 
-    private fun encodeText(value: String): String = Base64.getUrlEncoder()
-        .withoutPadding()
-        .encodeToString(value.toByteArray(StandardCharsets.UTF_8))
+    private fun Context.isDebuggable(): Boolean =
+        applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
 
-    private fun decodeText(value: String): String = String(
-        Base64.getUrlDecoder().decode(value),
-        StandardCharsets.UTF_8
-    )
+    enum class AvatarSelection { BODY, FACE, EYES, BEARD, HAIR, GLASSES, SHIRT, HAT }
 
-    enum class AvatarSelection { BODY, HAIR, TOP }
+    enum class AvatarColorSelection { SKIN, HAIR, EYES, SHIRT, BEARD, GLASSES, HAT }
+
+    private fun AvatarSelection.toAvatarSlot(): AvatarSlot = when (this) {
+        AvatarSelection.BODY -> AvatarSlot.BODY
+        AvatarSelection.FACE -> AvatarSlot.FACE
+        AvatarSelection.EYES -> AvatarSlot.EYES
+        AvatarSelection.BEARD -> AvatarSlot.BEARD
+        AvatarSelection.HAIR -> AvatarSlot.HAIR
+        AvatarSelection.GLASSES -> AvatarSlot.GLASSES
+        AvatarSelection.SHIRT -> AvatarSlot.SHIRT
+        AvatarSelection.HAT -> AvatarSlot.HAT
+    }
+
+    private fun selection(
+        preferences: Preferences,
+        key: Preferences.Key<String>,
+        slot: AvatarSlot,
+        default: String,
+        legacyIds: Map<String, String> = emptyMap()
+    ): String {
+        val stored = preferences[key] ?: return default
+        val migrated = legacyIds[stored] ?: stored
+        return if (AvatarCatalog.contains(slot, migrated)) migrated else default
+    }
 
     private object Keys {
         val PROFILE_NAME = stringPreferencesKey("profile_name")
@@ -188,12 +578,52 @@ class MvpRepository(private val context: Context) {
         val CURRENT_STREAK = intPreferencesKey("current_streak")
         val LONGEST_STREAK = intPreferencesKey("longest_streak")
         val TOTAL_COMPLETIONS = intPreferencesKey("total_completions")
+        val CATEGORY_HISTORY = stringPreferencesKey("category_history")
+        val PRIMARY_CATEGORY_CHANGED_DAY = longPreferencesKey("primary_category_changed_day")
         val LAST_COMPLETION_DAY = longPreferencesKey("last_completion_day")
+        val LAST_PRIMARY_COMPLETION_DAY = longPreferencesKey("last_primary_completion_day")
         val SELECTED_BODY = stringPreferencesKey("selected_body")
+        val SELECTED_FACE = stringPreferencesKey("selected_face")
+        val SELECTED_EYES = stringPreferencesKey("selected_eyes")
+        val SELECTED_BEARD = stringPreferencesKey("selected_beard")
         val SELECTED_HAIR = stringPreferencesKey("selected_hair")
+        val SELECTED_SHIRT = stringPreferencesKey("selected_shirt")
         val SELECTED_TOP = stringPreferencesKey("selected_top")
+        val SELECTED_EXPRESSION = stringPreferencesKey("selected_expression")
+        val SELECTED_PANTS = stringPreferencesKey("selected_pants")
+        val SELECTED_SHOES = stringPreferencesKey("selected_shoes")
+        val SELECTED_FACIAL_DETAIL = stringPreferencesKey("selected_facial_detail")
+        val SELECTED_GLASSES = stringPreferencesKey("selected_glasses")
+        val SELECTED_HAT = stringPreferencesKey("selected_hat")
+        val SELECTED_SCARF = stringPreferencesKey("selected_scarf")
+        val SELECTED_EARRINGS = stringPreferencesKey("selected_earrings")
+        val SELECTED_WATCH = stringPreferencesKey("selected_watch")
+        val AVATAR_SKIN_COLOR = stringPreferencesKey("avatar_skin_color")
+        val AVATAR_HAIR_COLOR = stringPreferencesKey("avatar_hair_color")
+        val AVATAR_EYE_COLOR = stringPreferencesKey("avatar_eye_color")
+        val AVATAR_SHIRT_COLOR = stringPreferencesKey("avatar_shirt_color")
+        val AVATAR_BEARD_COLOR = stringPreferencesKey("avatar_beard_color")
+        val AVATAR_GLASSES_COLOR = stringPreferencesKey("avatar_glasses_color")
+        val AVATAR_HAT_COLOR = stringPreferencesKey("avatar_hat_color")
+        val OWNED_BUNDLES = stringPreferencesKey("owned_bundles")
         val ROUND_GLASSES = booleanPreferencesKey("round_glasses")
         val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         val VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
+        val DEBUG_STORE_TEST_ACTIVE = booleanPreferencesKey("debug_store_test_active")
+        val DEBUG_ORIGINAL_COINS = intPreferencesKey("debug_original_coins")
+        val DEBUG_ORIGINAL_OWNED_BUNDLES = stringPreferencesKey("debug_original_owned_bundles")
+        val DEBUG_ORIGINAL_SELECTED_HAIR = stringPreferencesKey("debug_original_selected_hair")
+        val DEBUG_ORIGINAL_SELECTED_GLASSES = stringPreferencesKey("debug_original_selected_glasses")
+        val DEBUG_ORIGINAL_SELECTED_SHIRT = stringPreferencesKey("debug_original_selected_shirt")
+        val DEBUG_ORIGINAL_SELECTED_HAT = stringPreferencesKey("debug_original_selected_hat")
+        val DEBUG_ORIGINAL_HAIR_COLOR = stringPreferencesKey("debug_original_hair_color")
+        val DEBUG_ORIGINAL_SHIRT_COLOR = stringPreferencesKey("debug_original_shirt_color")
+        val DEBUG_ORIGINAL_GLASSES_COLOR = stringPreferencesKey("debug_original_glasses_color")
+        val DEBUG_ORIGINAL_HAT_COLOR = stringPreferencesKey("debug_original_hat_color")
+    }
+
+    private companion object {
+        val HEX_COLOR = Regex("^#[0-9A-Fa-f]{6}$")
+        const val STORE_TEST_COINS = 500
     }
 }

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- Camiseta de manga curta com gola redonda. -->
+    <path d="M355 730 Q144 760 174 1024 H850 Q880 760 669 730 L604 706 Q590 758 512 770 Q434 758 420 706Z"
+      fill="#4fa6d4" data-color="SHIRT" stroke="#263645" stroke-width="16"/>
+    <!-- Costuras que delimitam as mangas curtas. -->
+    <path d="M355 730 Q300 790 286 882 M669 730 Q724 790 738 882"
+      fill="none" stroke="#263645" stroke-width="12"/>
+    <!-- Acabamento da gola e iluminação discreta do tecido. -->
+    <path d="M420 706 Q434 758 512 770 Q590 758 604 706"
+      fill="none" stroke="#ffffff" stroke-opacity=".45" stroke-width="10"/>
+    <path d="M384 796 Q512 844 640 796"
+      fill="none" stroke="#ffffff" stroke-opacity=".22" stroke-width="10"/>
+  </g>
+</svg>
