@@ -1,9 +1,7 @@
 package com.example.remember.feature.mvp.data
 
 import android.app.AlarmManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.os.Build
 import com.example.remember.feature.mvp.domain.GoalRecurrence
 import com.example.remember.feature.mvp.domain.GoalReminderRules
@@ -19,6 +17,7 @@ internal interface ReminderScheduler {
 
 internal class GoalReminderScheduler(private val context: Context) : ReminderScheduler {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
+    private val pendingIntents = GoalReminderPendingIntentFactory(context)
 
     override fun sync(goal: MvpGoal) {
         cancel(goal.id)
@@ -50,11 +49,11 @@ internal class GoalReminderScheduler(private val context: Context) : ReminderSch
     }
 
     override fun cancel(goalId: Long) {
-        alarmManager.cancel(pendingIntent(goalId, PendingIntent.FLAG_NO_CREATE))
+        pendingIntents.findExisting(goalId)?.let(alarmManager::cancel)
     }
 
     private fun scheduleAt(goal: MvpGoal, triggerMillis: Long) {
-        val operation = pendingIntent(goal.id, PendingIntent.FLAG_UPDATE_CURRENT, goal)
+        val operation = pendingIntents.createOrUpdate(goal)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()) {
             alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
@@ -68,24 +67,6 @@ internal class GoalReminderScheduler(private val context: Context) : ReminderSch
                 operation
             )
         }
-    }
-
-    private fun pendingIntent(
-        goalId: Long,
-        behaviorFlag: Int,
-        goal: MvpGoal? = null
-    ): PendingIntent {
-        val intent = Intent(context, GoalReminderReceiver::class.java).apply {
-            action = ACTION_REMIND_GOAL
-            putExtra(EXTRA_GOAL_ID, goalId)
-            goal?.let { putExtra(EXTRA_TRIGGER_HINT, System.currentTimeMillis()) }
-        }
-        return PendingIntent.getBroadcast(
-            context,
-            goalId.hashCode(),
-            intent,
-            behaviorFlag or PendingIntent.FLAG_IMMUTABLE
-        )
     }
 
     companion object {

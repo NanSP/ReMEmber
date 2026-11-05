@@ -13,6 +13,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import com.example.remember.R
 import com.example.remember.feature.avatar.data.AvatarCatalog
@@ -59,6 +60,7 @@ fun RememberMeApp(
         return
     }
     val context = LocalContext.current
+    val resources = LocalResources.current
     val repository = remember { MvpRepository(context.applicationContext) }
     val state by repository.state.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
@@ -129,7 +131,6 @@ fun RememberMeApp(
     val streakRecoveredMessage = stringResource(R.string.streak_recovered)
     val streakRecoveryUnavailableMessage = stringResource(R.string.streak_recovery_unavailable)
     val primaryCategoryChangedMessage = stringResource(R.string.primary_category_changed)
-    val primaryCategoryLockedMessage = stringResource(R.string.primary_category_locked)
     val storePurchaseSuccess = stringResource(R.string.store_purchase_success)
     val storeAlreadyOwned = stringResource(R.string.store_purchase_already_owned)
     val storeInsufficientCoins = stringResource(R.string.store_purchase_insufficient)
@@ -202,7 +203,11 @@ fun RememberMeApp(
                                 snackbarHostState.showSnackbar(primaryCategoryChangedMessage)
                             PrimaryCategoryChangeStatus.LOCKED ->
                                 snackbarHostState.showSnackbar(
-                                    primaryCategoryLockedMessage.format(result.daysRemaining)
+                                    resources.getQuantityString(
+                                        R.plurals.primary_category_locked,
+                                        result.daysRemaining,
+                                        result.daysRemaining
+                                    )
                                 )
                             PrimaryCategoryChangeStatus.ALREADY_SELECTED -> Unit
                         }

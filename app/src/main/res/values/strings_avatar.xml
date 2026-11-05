@@ -10,18 +10,10 @@
     <string name="avatar_group_glasses">Óculos</string>
     <string name="avatar_group_clothes">Roupa</string>
     <string name="avatar_group_hat">Chapéu</string>
-    <string name="avatar_head">Rosto base</string>
     <string name="avatar_none">Nenhum</string>
     <string name="avatar_expression">Expressão</string>
-    <string name="avatar_pants">Calça</string>
-    <string name="avatar_shoes">Calçado</string>
-    <string name="avatar_facial_detail">Detalhe facial</string>
     <string name="avatar_glasses">Óculos</string>
     <string name="avatar_hat">Chapéu</string>
-    <string name="avatar_accessories">Acessórios</string>
-    <string name="avatar_scarf_label">Cachecol</string>
-    <string name="avatar_earrings_label">Brincos</string>
-    <string name="avatar_watch">Relógio</string>
     <string name="avatar_face_shape">Formato do rosto</string>
     <string name="avatar_beard">Barba e bigode</string>
     <string name="avatar_skin_color">Tom da pele</string>
@@ -31,13 +23,11 @@
     <string name="avatar_glasses_color">Cor dos óculos</string>
     <string name="avatar_shirt_color">Cor da roupa</string>
     <string name="avatar_hat_color">Cor do chapéu</string>
+    <string name="avatar_color_option">Cor %1$s</string>
 
     <string name="avatar_body_classic">Clássico</string>
     <string name="avatar_body_athletic">Atlético</string>
     <string name="avatar_body_wide">Largo</string>
-    <string name="avatar_body_delicate">Delicado</string>
-    <string name="avatar_body_strong">Forte</string>
-    <string name="avatar_body_large">Grande</string>
     <string name="avatar_face_round">Arredondado</string>
     <string name="avatar_face_oval">Oval</string>
     <string name="avatar_face_square">Quadrado</string>
@@ -81,57 +71,7 @@
     <string name="avatar_hat_witch">Chapéu de bruxa</string>
     <string name="avatar_hat_fedora">Fedora</string>
 
-    <string name="avatar_pants_jeans">Jeans clássico</string>
-    <string name="avatar_pants_khaki">Cáqui</string>
-    <string name="avatar_pants_black">Preta</string>
-    <string name="avatar_shoes_sneakers">Tênis vermelho</string>
-    <string name="avatar_shoes_boots">Bota marrom</string>
-    <string name="avatar_shoes_sandals">Sandália azul</string>
-    <string name="avatar_shoes_formal">Sapato social</string>
-    <string name="avatar_shoes_sport">Tênis esportivo</string>
-    <string name="avatar_top_turtleneck">Gola alta rosa</string>
-    <string name="avatar_top_shirt">Camisa azul</string>
-    <string name="avatar_top_tshirt">Camiseta verde</string>
-    <string name="avatar_top_graphic">Camiseta gráfica</string>
-    <string name="avatar_eyes_anime">Olhos grandes</string>
-
-    <string name="avatar_face_neutral">Neutra</string>
-    <string name="avatar_face_smile">Sorridente</string>
-    <string name="avatar_face_surprised">Surpresa</string>
-    <string name="avatar_face_angry">Brava</string>
-    <string name="avatar_face_sad">Triste</string>
-    <string name="avatar_face_laughing">Rindo</string>
-    <string name="avatar_face_wink">Piscando</string>
-    <string name="avatar_face_sleepy">Sonolenta</string>
-    <string name="avatar_face_crying">Chorando</string>
-    <string name="avatar_face_confident">Confiante</string>
-
-    <string name="avatar_hair_spiky">Espetado</string>
-    <string name="avatar_hair_curly">Cacheado curto</string>
-    <string name="avatar_hair_buzz">Raspado</string>
-    <string name="avatar_hair_side_part">Lateral</string>
-    <string name="avatar_hair_long">Longo</string>
-    <string name="avatar_hair_bob">Bob</string>
-    <string name="avatar_hair_mohawk">Moicano</string>
-    <string name="avatar_hair_braided">Tranças</string>
-    <string name="avatar_hair_bun">Coque</string>
     <string name="avatar_hair_wavy">Ondulado</string>
-    <string name="avatar_hair_messy_spiky">Espetado bagunçado</string>
-    <string name="avatar_hair_dreads">Dreads</string>
-
-    <string name="avatar_detail_freckles">Sardas</string>
-    <string name="avatar_detail_scar">Cicatriz</string>
-    <string name="avatar_detail_beauty_mark">Sinal de beleza</string>
-    <string name="avatar_detail_blush">Blush</string>
-    <string name="avatar_detail_beard">Barba</string>
-    <string name="avatar_detail_wrinkles">Rugas</string>
     <string name="avatar_glasses_round">Armação arredondada</string>
-    <string name="avatar_glasses_aviator">Aviador</string>
-    <string name="avatar_hat_beanie">Gorro azul</string>
     <string name="avatar_hat_cap">Boné</string>
-    <string name="avatar_hat_cap_blue">Boné azul</string>
-    <string name="avatar_scarf">Cachecol listrado</string>
-    <string name="avatar_earrings">Argolas douradas</string>
-    <string name="avatar_watch_digital">Digital</string>
-    <string name="avatar_watch_analog">Analógico</string>
 </resources>

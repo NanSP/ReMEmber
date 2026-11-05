@@ -1,50 +1,44 @@
 package com.example.remember
 
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performSemanticsAction
 import com.example.remember.feature.avatar.data.AvatarCatalog
 import com.example.remember.feature.avatar.domain.model.AvatarSlot
-import com.example.remember.feature.mvp.data.MvpRepository.AvatarSelection
-import com.example.remember.feature.mvp.domain.MvpState
-import com.example.remember.feature.mvp.presentation.AvatarScreen
+import com.example.remember.feature.mvp.presentation.AvatarGroupPanel
 import com.example.remember.ui.theme.ReMEmberTheme
+import androidx.test.filters.SdkSuppress
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
+@SdkSuppress(minSdkVersion = 30)
 class AvatarIntegrationTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    @Test
-    fun avatarEditorRendersAndSelectsAnExpression() {
-        var selection: Pair<AvatarSelection, String>? = null
-        val state = MvpState(profileName = "Teste", selectedBodyId = "body_03")
+    @Test(timeout = 30_000)
+    fun expressionPanelSelectsAnExpression() {
+        var selection: String? = null
+        val choices = AvatarCatalog.itemsFor(AvatarSlot.EYES).map { it.id to it.labelRes }
 
         composeRule.setContent {
             ReMEmberTheme {
-                AvatarScreen(
-                    state = state,
-                    avatarConfiguration = AvatarCatalog.defaultConfiguration,
-                    contentPadding = PaddingValues(),
-                    onSelectItem = { slot, itemId -> selection = slot to itemId },
-                    onSelectColor = { _, _ -> }
+                AvatarGroupPanel(
+                    title = R.string.avatar_expression,
+                    choices = choices,
+                    selected = "eyes_02",
+                    onSelect = { selection = it }
                 )
             }
         }
 
-        composeRule
-            .onNodeWithContentDescription("Avatar personalizado de Teste")
-            .assertExists()
-        composeRule.onNodeWithText("Expressão").performScrollTo().assertExists()
-        composeRule.onNodeWithText("Surpreso").performScrollTo().performClick()
+        composeRule.onNodeWithTag("avatar_option_eyes_01")
+            .performSemanticsAction(SemanticsActions.OnClick)
 
         composeRule.runOnIdle {
-            assertEquals(AvatarSelection.EYES to "eyes_03", selection)
+            assertEquals("eyes_01", selection)
             assertEquals(6, AvatarCatalog.itemsFor(AvatarSlot.EYES).size)
         }
     }

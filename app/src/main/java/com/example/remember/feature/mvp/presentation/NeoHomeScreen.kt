@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -178,8 +179,9 @@ private fun NotificationsMenu(
     modifier: Modifier = Modifier
 ) {
     val notificationCount = pendingGoals.size + if (canRecoverStreak) 1 else 0
-    val countDescription = stringResource(
-        R.string.home_notifications_count,
+    val countDescription = pluralStringResource(
+        R.plurals.home_notifications_count,
+        notificationCount,
         notificationCount
     )
     Box(modifier) {
@@ -233,8 +235,9 @@ private fun NotificationsMenu(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                stringResource(
-                                    R.string.streak_recovery_description,
+                                pluralStringResource(
+                                    R.plurals.streak_recovery_description,
+                                    recoveriesRemaining,
                                     recoveriesRemaining
                                 ),
                                 color = NeoText,
@@ -341,8 +344,9 @@ private fun HomeHeader(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    stringResource(
-                                        R.string.home_focus_lock_status,
+                                    pluralStringResource(
+                                        R.plurals.home_focus_lock_status,
+                                        state.primaryCategoryChangeDaysRemaining,
                                         state.primaryCategoryChangeDaysRemaining
                                     ),
                                     color = NeoText
@@ -726,11 +730,16 @@ private fun SceneBackdrop(category: GoalCategory, longestStreak: Int) {
         null
     }
     val daysUntilSeasonReward = RewardRules.daysUntilNextSeasonReward(longestStreak)
+    val longestStreakText = pluralStringResource(
+        R.plurals.streak_days,
+        scene.longestStreak,
+        scene.longestStreak
+    )
     val sceneDescription = stringResource(
         R.string.home_scene_progress_description,
         scene.currentStep,
         scene.totalSteps,
-        scene.longestStreak
+        longestStreakText
     )
     BoxWithConstraints(
         Modifier
@@ -784,8 +793,9 @@ private fun SceneBackdrop(category: GoalCategory, longestStreak: Int) {
             )
             if (scene.daysUntilNextStage > 0) {
                 Text(
-                    stringResource(
-                        R.string.home_scene_next_stage,
+                    pluralStringResource(
+                        R.plurals.home_scene_next_stage,
+                        scene.daysUntilNextStage,
                         scene.daysUntilNextStage
                     ),
                     color = Color.White,
@@ -802,7 +812,11 @@ private fun SceneBackdrop(category: GoalCategory, longestStreak: Int) {
             }
             if (daysUntilSeasonReward != null) {
                 Text(
-                    stringResource(R.string.home_scene_season_bonus, daysUntilSeasonReward),
+                    pluralStringResource(
+                        R.plurals.home_scene_season_bonus,
+                        daysUntilSeasonReward,
+                        daysUntilSeasonReward
+                    ),
                     color = Color.White,
                     style = MaterialTheme.typography.labelSmall
                 )
@@ -848,7 +862,12 @@ private fun GoalsPanel(
                         fontWeight = FontWeight.Black
                     )
                     Text(
-                        stringResource(R.string.home_goals_progress, completed, goals.size),
+                        pluralStringResource(
+                            R.plurals.home_goals_progress,
+                            completed,
+                            completed,
+                            goals.size
+                        ),
                         color = NeoText,
                         style = MaterialTheme.typography.labelMedium
                     )

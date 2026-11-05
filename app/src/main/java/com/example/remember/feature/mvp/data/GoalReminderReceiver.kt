@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 
 class GoalReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != GoalReminderScheduler.ACTION_REMIND_GOAL) return
         val goalId = intent.getLongExtra(GoalReminderScheduler.EXTRA_GOAL_ID, Long.MIN_VALUE)
         if (goalId == Long.MIN_VALUE) return
         val pendingResult = goAsync()
@@ -45,6 +46,7 @@ class GoalReminderReceiver : BroadcastReceiver() {
 
 class ReminderRescheduleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action !in RESCHEDULE_ACTIONS) return
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -53,6 +55,15 @@ class ReminderRescheduleReceiver : BroadcastReceiver() {
                 pendingResult.finish()
             }
         }
+    }
+
+    private companion object {
+        val RESCHEDULE_ACTIONS = setOf(
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED
+        )
     }
 }
 
