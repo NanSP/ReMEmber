@@ -43,6 +43,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.toColorInt
 import com.example.remember.R
 import com.example.remember.feature.avatar.data.AvatarCatalog
 import com.example.remember.feature.avatar.domain.model.AvatarConfiguration
@@ -340,7 +342,7 @@ fun GoalsScreen(
     var category by rememberSaveable { mutableStateOf(state.primaryCategory) }
     var recurrenceName by rememberSaveable { mutableStateOf(GoalRecurrence.NONE.name) }
     var reminderEnabled by rememberSaveable { mutableStateOf(false) }
-    var reminderMinutes by rememberSaveable { mutableStateOf(9 * 60) }
+    var reminderMinutes by rememberSaveable { mutableIntStateOf(9 * 60) }
     var editingGoalId by rememberSaveable { mutableStateOf<Long?>(null) }
     val recurrence = GoalRecurrence.valueOf(recurrenceName)
     val context = LocalContext.current
@@ -825,7 +827,7 @@ private fun AvatarColorSwatch(
     Box(
         modifier = Modifier
             .size(48.dp)
-            .background(Color(android.graphics.Color.parseColor(hex)), CircleShape)
+            .background(Color(hex.toColorInt()), CircleShape)
             .border(
                 width = if (isSelected) 4.dp else 1.dp,
                 color = if (isSelected) NeoButton else NeoElement,

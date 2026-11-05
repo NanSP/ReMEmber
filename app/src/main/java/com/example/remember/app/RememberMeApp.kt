@@ -13,6 +13,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import com.example.remember.R
 import com.example.remember.feature.avatar.data.AvatarCatalog
@@ -59,6 +60,7 @@ fun RememberMeApp(
         return
     }
     val context = LocalContext.current
+    val resources = LocalResources.current
     val repository = remember { MvpRepository(context.applicationContext) }
     val state by repository.state.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
@@ -201,7 +203,7 @@ fun RememberMeApp(
                                 snackbarHostState.showSnackbar(primaryCategoryChangedMessage)
                             PrimaryCategoryChangeStatus.LOCKED ->
                                 snackbarHostState.showSnackbar(
-                                    context.resources.getQuantityString(
+                                    resources.getQuantityString(
                                         R.plurals.primary_category_locked,
                                         result.daysRemaining,
                                         result.daysRemaining
