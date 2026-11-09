@@ -4,8 +4,34 @@ import com.example.remember.feature.goals.domain.model.GoalCategory
 
 data class DailyBonusMission(
     val category: GoalCategory,
-    val completed: Boolean
-)
+    val completed: Boolean,
+    val startedAtMillis: Long? = null
+) {
+    val requiredDurationMillis: Long
+        get() = GamificationRules.bonusDurationMillis(category)
+
+    val requiresTimer: Boolean
+        get() = requiredDurationMillis > 0L
+
+    val isStarted: Boolean
+        get() = startedAtMillis != null
+
+    fun remainingMillis(nowMillis: Long): Long = when {
+        completed || !requiresTimer -> 0L
+        startedAtMillis == null -> requiredDurationMillis
+        else -> (requiredDurationMillis - (nowMillis - startedAtMillis)).coerceAtLeast(0L)
+    }
+
+    fun canComplete(nowMillis: Long): Boolean =
+        !completed && (!requiresTimer || isStarted && remainingMillis(nowMillis) == 0L)
+}
+
+enum class BonusMissionCompletionResult {
+    COMPLETED,
+    ALREADY_COMPLETED,
+    NOT_STARTED,
+    TIMER_RUNNING
+}
 
 enum class AchievementId {
     FIRST_COMPLETION,
@@ -39,6 +65,15 @@ object GamificationRules {
     const val ACHIEVEMENT_EXPERIENCE = 50
     const val ACHIEVEMENT_COINS = 20
     const val MONTHLY_RECOVERIES = 2
+    const val STUDY_BONUS_DURATION_MILLIS = 15 * 60 * 1_000L
+    const val EXERCISE_BONUS_DURATION_MILLIS = 10 * 60 * 1_000L
+
+    fun bonusDurationMillis(category: GoalCategory): Long = when (category) {
+        GoalCategory.STUDY -> STUDY_BONUS_DURATION_MILLIS
+        GoalCategory.EXERCISE -> EXERCISE_BONUS_DURATION_MILLIS
+        GoalCategory.FOOD_AND_HYDRATION,
+        GoalCategory.SIMPLE_TASK -> 0L
+    }
 
     fun unlockedAchievements(stats: AchievementStats): Set<AchievementId> = buildSet {
         if (stats.totalCompletions >= 1) add(AchievementId.FIRST_COMPLETION)

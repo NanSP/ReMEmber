@@ -64,7 +64,8 @@
     <string name="bonus_mission_exercise">Missão: movimente-se por 10 minutos</string>
     <string name="bonus_mission_tasks">Missão: conclua uma tarefa rápida</string>
     <string name="bonus_mission_reward">+20 XP · +10 moedas</string>
-    <string name="bonus_mission_action">Fazer</string>
+    <string name="bonus_mission_start_action">Iniciar</string>
+    <string name="bonus_mission_complete_action">Concluir</string>
     <string name="streak_recovery_title">Recuperar sequência</string>
     <plurals name="streak_recovery_description">
         <item quantity="one">Use uma recuperação hoje · %1$d restante no mês</item>

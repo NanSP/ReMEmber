@@ -275,6 +275,12 @@ O aplicativo declara as seguintes permissões:
 - `SCHEDULE_EXACT_ALARM` — disparo dos lembretes no horário configurado.
 - `RECEIVE_BOOT_COMPLETED` — restauração dos alarmes após reiniciar o aparelho.
 
+## Privacidade e LGPD
+
+O ReMEmber não declara acesso à internet e mantém perfil, objetivos, histórico e progresso no armazenamento privado do aparelho. Em `Mais → Privacidade e LGPD`, o usuário pode consultar o aviso de privacidade, corrigir o nome do perfil, exportar uma cópia em JSON e excluir todos os dados locais. Backups em nuvem e transferência automática entre aparelhos estão desativados.
+
+A varredura técnica, o inventário de dados e as pendências organizacionais para uma publicação em produção estão documentados em [`docs/LGPD_AUDIT.md`](docs/LGPD_AUDIT.md).
+
 ## Estado do projeto
 
 O ReMEmber está em desenvolvimento e funciona como um aplicativo local. Não existe atualmente um servidor ou API externa; uma futura sincronização em nuvem poderá ser incorporada como uma nova camada de dados sem alterar a organização principal das funcionalidades.

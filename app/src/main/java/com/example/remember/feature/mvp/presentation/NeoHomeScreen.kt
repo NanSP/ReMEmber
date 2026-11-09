@@ -30,8 +30,11 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,6 +81,7 @@ import com.example.remember.ui.theme.NeoBackground
 import com.example.remember.ui.theme.NeoButton
 import com.example.remember.ui.theme.NeoElement
 import com.example.remember.ui.theme.NeoText
+import kotlinx.coroutines.delay
 
 @Composable
 fun NeoTodayScreen(
@@ -89,6 +93,7 @@ fun NeoTodayScreen(
     onCreateGoal: () -> Unit,
     onSelectPrimaryCategory: (GoalCategory) -> Unit,
     onCompleteGoal: (Long) -> Unit,
+    onStartBonusMission: () -> Unit,
     onCompleteBonusMission: () -> Unit,
     onRecoverStreak: () -> Unit
 ) {
@@ -161,6 +166,7 @@ fun NeoTodayScreen(
             bonusMission = state.bonusMission,
             onCreateGoal = onCreateGoal,
             onCompleteGoal = onCompleteGoal,
+            onStartBonusMission = onStartBonusMission,
             onCompleteBonusMission = onCompleteBonusMission,
             footerInset = footerInset
         )
@@ -832,6 +838,7 @@ private fun GoalsPanel(
     bonusMission: DailyBonusMission,
     onCreateGoal: () -> Unit,
     onCompleteGoal: (Long) -> Unit,
+    onStartBonusMission: () -> Unit,
     onCompleteBonusMission: () -> Unit,
     footerInset: Dp = 0.dp
 ) {
@@ -888,6 +895,7 @@ private fun GoalsPanel(
             Spacer(Modifier.height(8.dp))
             BonusMissionRow(
                 mission = bonusMission,
+                onStart = onStartBonusMission,
                 onComplete = onCompleteBonusMission
             )
             Spacer(Modifier.height(6.dp))
@@ -920,8 +928,20 @@ private fun GoalsPanel(
 @Composable
 private fun BonusMissionRow(
     mission: DailyBonusMission,
+    onStart: () -> Unit,
     onComplete: () -> Unit
 ) {
+    var nowMillis by remember(mission.startedAtMillis) {
+        mutableLongStateOf(System.currentTimeMillis())
+    }
+    val remainingMillis = mission.remainingMillis(nowMillis)
+    val canComplete = mission.canComplete(nowMillis)
+    LaunchedEffect(mission.startedAtMillis, mission.completed) {
+        while (mission.isStarted && !mission.completed && mission.remainingMillis(nowMillis) > 0L) {
+            delay(1_000L)
+            nowMillis = System.currentTimeMillis()
+        }
+    }
     val title = stringResource(
         when (mission.category) {
             GoalCategory.STUDY -> R.string.bonus_mission_study
@@ -930,15 +950,26 @@ private fun BonusMissionRow(
             GoalCategory.SIMPLE_TASK -> R.string.bonus_mission_tasks
         }
     )
+    val action = when {
+        mission.completed -> "✓"
+        !mission.requiresTimer -> stringResource(R.string.bonus_mission_complete_action)
+        !mission.isStarted -> stringResource(R.string.bonus_mission_start_action)
+        canComplete -> stringResource(R.string.bonus_mission_complete_action)
+        else -> formatBonusRemainingTime(remainingMillis)
+    }
+    val onAction = when {
+        mission.requiresTimer && !mission.isStarted -> onStart
+        else -> onComplete
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(NeoBackground)
             .clickable(
-                enabled = !mission.completed,
+                enabled = !mission.completed && (!mission.isStarted || canComplete),
                 role = Role.Button,
-                onClick = onComplete
+                onClick = onAction
             )
             .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -962,12 +993,19 @@ private fun BonusMissionRow(
         }
         Spacer(Modifier.width(8.dp))
         Text(
-            if (mission.completed) "✓" else stringResource(R.string.bonus_mission_action),
+            action,
             color = NeoButton,
             fontWeight = FontWeight.Black,
             style = MaterialTheme.typography.labelMedium
         )
     }
+}
+
+private fun formatBonusRemainingTime(remainingMillis: Long): String {
+    val totalSeconds = (remainingMillis + 999L) / 1_000L
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return "%02d:%02d".format(minutes, seconds)
 }
 
 @Composable

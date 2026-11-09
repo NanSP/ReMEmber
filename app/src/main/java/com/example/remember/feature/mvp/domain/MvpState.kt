@@ -70,7 +70,9 @@ data class MvpState(
     val avatarHatColor: String = "#4B5367",
     val ownedBundleIds: Set<String> = emptySet(),
     val soundEnabled: Boolean = true,
-    val vibrationEnabled: Boolean = true
+    val vibrationEnabled: Boolean = true,
+    val privacyNoticeVersion: String? = null,
+    val privacyNoticeAcknowledgedAtMillis: Long? = null
 ) {
     val isOnboardingComplete: Boolean
         get() = profileName.isNotBlank() && selectedBodyId.isNotBlank()

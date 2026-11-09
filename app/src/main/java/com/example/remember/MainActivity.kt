@@ -1,10 +1,12 @@
 package com.example.remember
 
+import android.app.ActivityManager
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.graphics.drawable.toBitmap
 import com.example.remember.app.RememberMeApp
 import com.example.remember.feature.goals.domain.model.GoalCategory
 import com.example.remember.ui.theme.ReMEmberTheme
@@ -12,6 +14,7 @@ import com.example.remember.ui.theme.ReMEmberTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyTaskDescription()
         enableEdgeToEdge()
         val isDebuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         val scenePreviewStreak = if (isDebuggable) {
@@ -65,7 +68,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @Suppress("DEPRECATION")
+    private fun applyTaskDescription() {
+        val taskIcon = applicationInfo.loadIcon(packageManager).toBitmap(
+            width = TASK_ICON_SIZE,
+            height = TASK_ICON_SIZE
+        )
+        setTaskDescription(
+            ActivityManager.TaskDescription(
+                getString(R.string.app_name),
+                taskIcon,
+                getColor(R.color.neo_background)
+            )
+        )
+    }
+
     private companion object {
+        const val TASK_ICON_SIZE = 192
         const val EXTRA_SCENE_PREVIEW_STREAK = "scene_preview_streak"
         const val EXTRA_SCENE_PREVIEW_CATEGORY = "scene_preview_category"
         const val EXTRA_INITIAL_PAGE = "initial_page"

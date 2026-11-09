@@ -13,6 +13,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.remember.feature.goals.domain.model.GoalCategory
 import com.example.remember.feature.mvp.data.local.RememberDatabase
 import com.example.remember.feature.mvp.domain.AchievementId
+import com.example.remember.feature.mvp.domain.BonusMissionCompletionResult
+import com.example.remember.feature.mvp.domain.GamificationRules
 import com.example.remember.feature.mvp.domain.GoalRecurrence
 import com.example.remember.feature.mvp.domain.MvpGoal
 import java.io.File
@@ -25,10 +27,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.json.JSONObject
 
 @RunWith(AndroidJUnit4::class)
 class MvpRepositoryIntegrationTest {
@@ -39,6 +43,7 @@ class MvpRepositoryIntegrationTest {
     private lateinit var dataStoreFile: File
     private lateinit var reminders: FakeReminderScheduler
     private var today = 20_100L
+    private var nowMillis = 1_800_000_000_000L
 
     @Before
     fun setUp() {
@@ -69,16 +74,15 @@ class MvpRepositoryIntegrationTest {
         repository.saveProfile("Integração", GoalCategory.STUDY, "body_03")
         repository.addGoal(
             title = "Estudar Kotlin",
-            category = GoalCategory.STUDY,
             recurrence = GoalRecurrence.DAILY,
             reminderMinutesOfDay = 8 * 60
         )
         val created = repository.state.first { it.goals.size == 1 }.goals.single()
+        assertEquals(GoalCategory.STUDY, created.category)
 
         repository.updateGoal(
             goalId = created.id,
             title = "Estudar Kotlin e Room",
-            category = GoalCategory.STUDY,
             recurrence = GoalRecurrence.DAILY,
             reminderMinutesOfDay = 9 * 60
         )
@@ -120,7 +124,7 @@ class MvpRepositoryIntegrationTest {
             }
         )
         interruptedRepository.saveProfile("Recuperação", GoalCategory.STUDY, "body_03")
-        interruptedRepository.addGoal("Ler", GoalCategory.STUDY)
+        interruptedRepository.addGoal("Ler")
         val goal = interruptedRepository.state.first { it.goals.isNotEmpty() }.goals.single()
 
         assertTrue(runCatching { interruptedRepository.completeGoal(goal.id) }.isFailure)
@@ -141,12 +145,73 @@ class MvpRepositoryIntegrationTest {
         assertEquals(35, afterRetry.coins)
     }
 
+    @Test
+    fun timedBonusMissionMustStartAndReachItsDurationBeforeCompletion() = runBlocking {
+        val repository = repository()
+        repository.saveProfile("Cronômetro", GoalCategory.STUDY, "body_03")
+
+        assertEquals(
+            BonusMissionCompletionResult.NOT_STARTED,
+            repository.completeBonusMission()
+        )
+        assertTrue(repository.startBonusMission())
+        val running = repository.state.first { it.bonusMission.isStarted }.bonusMission
+        assertEquals(nowMillis, running.startedAtMillis)
+        assertEquals(
+            BonusMissionCompletionResult.TIMER_RUNNING,
+            repository.completeBonusMission()
+        )
+
+        nowMillis += GamificationRules.STUDY_BONUS_DURATION_MILLIS
+        assertEquals(
+            BonusMissionCompletionResult.COMPLETED,
+            repository.completeBonusMission()
+        )
+        val completed = repository.state.first { it.bonusMission.completed }
+        assertEquals(20, completed.experience)
+        assertEquals(10, completed.coins)
+        assertEquals(
+            BonusMissionCompletionResult.ALREADY_COMPLETED,
+            repository.completeBonusMission()
+        )
+    }
+
+    @Test
+    fun privacyControlsExportCorrectAndDeleteAllLocalData() = runBlocking {
+        val repository = repository()
+        repository.saveProfile("Nome original", GoalCategory.STUDY, "body_03")
+        repository.addGoal("Objetivo privado")
+        val populated = repository.state.first { it.goals.isNotEmpty() }
+
+        assertEquals("1.0", populated.privacyNoticeVersion)
+        assertTrue(populated.privacyNoticeAcknowledgedAtMillis != null)
+        val exported = JSONObject(PrivacyDataExporter.toJson(populated, nowMillis))
+        assertEquals("Nome original", exported.getJSONObject("profile").getString("name"))
+        assertEquals(1, exported.getJSONArray("goals").length())
+
+        repository.updateProfileName("Nome corrigido")
+        assertEquals(
+            "Nome corrigido",
+            repository.state.first { it.profileName == "Nome corrigido" }.profileName
+        )
+
+        val goalId = populated.goals.single().id
+        repository.deleteAllUserData()
+        val deleted = repository.state.first { !it.isOnboardingComplete }
+        assertTrue(deleted.profileName.isBlank())
+        assertTrue(deleted.goals.isEmpty())
+        assertTrue(deleted.completionHistory.isEmpty())
+        assertFalse(deleted.privacyNoticeAcknowledgedAtMillis != null)
+        assertTrue(goalId in reminders.cancelled)
+    }
+
     private fun repository(
         onCompletionStored: suspend () -> Unit = {}
     ) = MvpRepository(
         context = context,
         currentEpochDay = { today },
         currentLocalHour = { 10 },
+        currentTimeMillis = { nowMillis },
         database = database,
         dataStore = dataStore,
         reminderScheduler = reminders,

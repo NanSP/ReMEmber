@@ -21,4 +21,7 @@ interface GoalCompletionDao {
 
     @Query("SELECT COUNT(*) FROM goal_completions")
     suspend fun count(): Int
+
+    @Query("DELETE FROM goal_completions")
+    suspend fun deleteAll()
 }

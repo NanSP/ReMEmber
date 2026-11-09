@@ -1,5 +1,7 @@
 package com.example.remember.app
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -23,7 +25,9 @@ import com.example.remember.feature.avatar.domain.model.AvatarSlot
 import com.example.remember.feature.goals.domain.model.GoalCategory
 import com.example.remember.feature.mvp.data.MvpRepository
 import com.example.remember.feature.mvp.data.MvpRepository.AvatarColorSelection
+import com.example.remember.feature.mvp.data.PrivacyDataExporter
 import com.example.remember.feature.mvp.data.PrimaryCategoryChangeStatus
+import com.example.remember.feature.mvp.domain.BonusMissionCompletionResult
 import com.example.remember.feature.mvp.domain.CompletionHistoryItem
 import com.example.remember.feature.mvp.presentation.AvatarScreen
 import com.example.remember.feature.mvp.presentation.GoalsScreen
@@ -36,6 +40,7 @@ import com.example.remember.feature.mvp.presentation.NeoTodayScreen
 import com.example.remember.feature.mvp.presentation.MvpPage
 import com.example.remember.feature.mvp.presentation.OnboardingScreen
 import com.example.remember.feature.mvp.presentation.ProfileScreen
+import com.example.remember.feature.mvp.presentation.PrivacyScreen
 import com.example.remember.feature.mvp.presentation.SettingsScreen
 import com.example.remember.feature.mvp.presentation.StoreScreen
 import com.example.remember.feature.store.data.StorePurchaseResult
@@ -128,6 +133,12 @@ fun RememberMeApp(
     val bonusMissionCompletedMessage = stringResource(R.string.bonus_mission_completed)
     val bonusMissionAlreadyCompletedMessage =
         stringResource(R.string.bonus_mission_already_completed)
+    val bonusMissionNotStartedMessage = stringResource(R.string.bonus_mission_not_started)
+    val bonusMissionTimerRunningMessage = stringResource(R.string.bonus_mission_timer_running)
+    val privacyNameUpdatedMessage = stringResource(R.string.privacy_name_updated)
+    val privacyExportChooser = stringResource(R.string.privacy_export_chooser)
+    val privacyExportSubject = stringResource(R.string.privacy_export_subject)
+    val privacyContactUrl = stringResource(R.string.privacy_contact_url_full)
     val streakRecoveredMessage = stringResource(R.string.streak_recovered)
     val streakRecoveryUnavailableMessage = stringResource(R.string.streak_recovery_unavailable)
     val primaryCategoryChangedMessage = stringResource(R.string.primary_category_changed)
@@ -221,12 +232,23 @@ fun RememberMeApp(
                 },
                 onCompleteBonusMission = {
                     scope.launch {
-                        val completed = repository.completeBonusMission()
+                        val result = repository.completeBonusMission()
                         snackbarHostState.showSnackbar(
-                            if (completed) bonusMissionCompletedMessage
-                            else bonusMissionAlreadyCompletedMessage
+                            when (result) {
+                                BonusMissionCompletionResult.COMPLETED ->
+                                    bonusMissionCompletedMessage
+                                BonusMissionCompletionResult.ALREADY_COMPLETED ->
+                                    bonusMissionAlreadyCompletedMessage
+                                BonusMissionCompletionResult.NOT_STARTED ->
+                                    bonusMissionNotStartedMessage
+                                BonusMissionCompletionResult.TIMER_RUNNING ->
+                                    bonusMissionTimerRunningMessage
+                            }
                         )
                     }
+                },
+                onStartBonusMission = {
+                    scope.launch { repository.startBonusMission() }
                 },
                 onRecoverStreak = {
                     scope.launch {
@@ -241,12 +263,11 @@ fun RememberMeApp(
             MvpPage.GOALS -> GoalsScreen(
                 state = currentState,
                 contentPadding = contentPadding,
-                onSaveGoal = { goalId, title, category, recurrence, reminderMinutes ->
+                onSaveGoal = { goalId, title, recurrence, reminderMinutes ->
                     scope.launch {
                         if (goalId == null) {
                             repository.addGoal(
                                 title,
-                                category,
                                 recurrence,
                                 reminderMinutes
                             )
@@ -255,7 +276,6 @@ fun RememberMeApp(
                             repository.updateGoal(
                                 goalId,
                                 title,
-                                category,
                                 recurrence,
                                 reminderMinutes
                             )
@@ -322,6 +342,34 @@ fun RememberMeApp(
                 onBack = { page = MvpPage.MORE },
                 onSoundChange = { scope.launch { repository.setSoundEnabled(it) } },
                 onVibrationChange = { scope.launch { repository.setVibrationEnabled(it) } }
+            )
+            MvpPage.PRIVACY -> PrivacyScreen(
+                state = currentState,
+                contentPadding = contentPadding,
+                onBack = { page = MvpPage.MORE },
+                onUpdateProfileName = { name ->
+                    scope.launch {
+                        repository.updateProfileName(name)
+                        snackbarHostState.showSnackbar(privacyNameUpdatedMessage)
+                    }
+                },
+                onExportData = {
+                    val exportIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_SUBJECT, privacyExportSubject)
+                        putExtra(Intent.EXTRA_TEXT, PrivacyDataExporter.toJson(currentState))
+                    }
+                    context.startActivity(Intent.createChooser(exportIntent, privacyExportChooser))
+                },
+                onOpenContact = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(privacyContactUrl)))
+                },
+                onDeleteAllData = {
+                    scope.launch {
+                        repository.deleteAllUserData()
+                        page = MvpPage.TODAY
+                    }
+                }
             )
         }
     }
