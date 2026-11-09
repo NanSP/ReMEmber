@@ -1,5 +1,6 @@
 package com.example.remember.feature.mvp.data
 
+import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import androidx.datastore.preferences.core.Preferences
@@ -17,6 +18,7 @@ import com.example.remember.feature.goals.domain.model.GoalCategory
 import com.example.remember.feature.mvp.domain.CategoryHistory
 import com.example.remember.feature.mvp.domain.AchievementId
 import com.example.remember.feature.mvp.domain.AchievementStats
+import com.example.remember.feature.mvp.domain.BonusMissionCompletionResult
 import com.example.remember.feature.mvp.domain.DailyBonusMission
 import com.example.remember.feature.mvp.domain.GamificationRules
 import com.example.remember.feature.mvp.domain.GoalRecurrence
@@ -61,6 +63,7 @@ class MvpRepository internal constructor(
     private val context: Context,
     private val currentEpochDay: () -> Long = DeviceDayProvider::currentEpochDay,
     private val currentLocalHour: () -> Int = DeviceDayProvider::currentLocalHour,
+    private val currentTimeMillis: () -> Long = System::currentTimeMillis,
     private val database: RememberDatabase = RememberDatabase.getInstance(context),
     private val dataStore: DataStore<Preferences> = context.mvpDataStore,
     private val reminderScheduler: ReminderScheduler = GoalReminderScheduler(context),
@@ -100,6 +103,8 @@ class MvpRepository internal constructor(
             preferences[Keys.PROFILE_NAME] = name.trim()
             preferences[Keys.PRIMARY_CATEGORY] = primaryCategory.name
             preferences[Keys.SELECTED_BODY] = bodyItemId
+            preferences[Keys.PRIVACY_NOTICE_VERSION] = PRIVACY_NOTICE_VERSION
+            preferences[Keys.PRIVACY_NOTICE_ACKNOWLEDGED_AT] = currentTimeMillis()
             if (preferences[Keys.PRIMARY_CATEGORY_CHANGED_DAY] == null) {
                 preferences[Keys.PRIMARY_CATEGORY_CHANGED_DAY] = currentEpochDay()
             }
@@ -111,13 +116,19 @@ class MvpRepository internal constructor(
         }
     }
 
+    suspend fun updateProfileName(name: String) {
+        val normalizedName = name.trim()
+        if (normalizedName.isBlank()) return
+        dataStore.edit { it[Keys.PROFILE_NAME] = normalizedName }
+    }
+
     suspend fun addGoal(
         title: String,
-        category: GoalCategory,
         recurrence: GoalRecurrence = GoalRecurrence.NONE,
         reminderMinutesOfDay: Int? = null
     ) {
         if (title.isBlank()) return
+        val category = preferences.first().category(Keys.PRIMARY_CATEGORY)
         val createdGoal = MvpGoal(
             id = System.currentTimeMillis(),
             title = title.trim(),
@@ -133,7 +144,6 @@ class MvpRepository internal constructor(
     suspend fun updateGoal(
         goalId: Long,
         title: String,
-        category: GoalCategory,
         recurrence: GoalRecurrence,
         reminderMinutesOfDay: Int?
     ) {
@@ -142,7 +152,6 @@ class MvpRepository internal constructor(
         val existing = entity.toDomain() ?: return
         val updatedGoal = existing.copy(
             title = title.trim(),
-            category = category,
             recurrence = recurrence,
             reminderMinutesOfDay = reminderMinutesOfDay,
             reminderEnabled = reminderMinutesOfDay != null
@@ -205,11 +214,50 @@ class MvpRepository internal constructor(
         }
     }
 
-    suspend fun completeBonusMission(): Boolean {
-        var completed = false
+    suspend fun startBonusMission(): Boolean {
+        var started = false
         dataStore.edit { preferences ->
             val today = currentEpochDay()
             if (preferences[Keys.LAST_BONUS_MISSION_DAY] == today) return@edit
+            val category = preferences.category(Keys.PRIMARY_CATEGORY)
+            if (GamificationRules.bonusDurationMillis(category) == 0L) return@edit
+
+            val alreadyStartedToday =
+                preferences[Keys.BONUS_MISSION_STARTED_DAY] == today &&
+                    preferences[Keys.BONUS_MISSION_STARTED_CATEGORY] == category.name &&
+                    preferences[Keys.BONUS_MISSION_STARTED_AT] != null
+            if (alreadyStartedToday) return@edit
+
+            preferences[Keys.BONUS_MISSION_STARTED_DAY] = today
+            preferences[Keys.BONUS_MISSION_STARTED_CATEGORY] = category.name
+            preferences[Keys.BONUS_MISSION_STARTED_AT] = currentTimeMillis()
+            started = true
+        }
+        return started
+    }
+
+    suspend fun completeBonusMission(): BonusMissionCompletionResult {
+        var result = BonusMissionCompletionResult.ALREADY_COMPLETED
+        dataStore.edit { preferences ->
+            val today = currentEpochDay()
+            if (preferences[Keys.LAST_BONUS_MISSION_DAY] == today) return@edit
+            val category = preferences.category(Keys.PRIMARY_CATEGORY)
+            val requiredDuration = GamificationRules.bonusDurationMillis(category)
+            if (requiredDuration > 0L) {
+                val startedAt = preferences[Keys.BONUS_MISSION_STARTED_AT]
+                val hasValidStart =
+                    preferences[Keys.BONUS_MISSION_STARTED_DAY] == today &&
+                        preferences[Keys.BONUS_MISSION_STARTED_CATEGORY] == category.name &&
+                        startedAt != null
+                if (!hasValidStart) {
+                    result = BonusMissionCompletionResult.NOT_STARTED
+                    return@edit
+                }
+                if (currentTimeMillis() - requireNotNull(startedAt) < requiredDuration) {
+                    result = BonusMissionCompletionResult.TIMER_RUNNING
+                    return@edit
+                }
+            }
             preferences[Keys.LAST_BONUS_MISSION_DAY] = today
             preferences[Keys.BONUS_MISSIONS_COMPLETED] =
                 (preferences[Keys.BONUS_MISSIONS_COMPLETED] ?: 0) + 1
@@ -222,9 +270,12 @@ class MvpRepository internal constructor(
                     ?: ((preferences[Keys.COINS] ?: 0) - GamificationRules.BONUS_COINS)
                         .coerceAtLeast(0)) + GamificationRules.BONUS_COINS
             grantNewAchievements(preferences, decodeCategoryHistories(preferences))
-            completed = true
+            preferences.remove(Keys.BONUS_MISSION_STARTED_AT)
+            preferences.remove(Keys.BONUS_MISSION_STARTED_DAY)
+            preferences.remove(Keys.BONUS_MISSION_STARTED_CATEGORY)
+            result = BonusMissionCompletionResult.COMPLETED
         }
-        return completed
+        return result
     }
 
     suspend fun recoverStreak(): Boolean {
@@ -262,6 +313,16 @@ class MvpRepository internal constructor(
     suspend fun deleteGoal(goalId: Long) {
         goalDao.deleteById(goalId)
         reminderScheduler.cancel(goalId)
+    }
+
+    suspend fun deleteAllUserData() {
+        goalDao.getAll().forEach { reminderScheduler.cancel(it.id) }
+        database.withTransaction {
+            completionDao.deleteAll()
+            goalDao.deleteAll()
+        }
+        dataStore.edit { it.clear() }
+        context.getSystemService(NotificationManager::class.java).cancelAll()
     }
 
     suspend fun purchaseBundle(bundleId: String): StorePurchaseResult {
@@ -695,7 +756,12 @@ class MvpRepository internal constructor(
         ),
         bonusMission = DailyBonusMission(
             category = primaryCategory,
-            completed = preferences[Keys.LAST_BONUS_MISSION_DAY] == today
+            completed = preferences[Keys.LAST_BONUS_MISSION_DAY] == today,
+            startedAtMillis = preferences[Keys.BONUS_MISSION_STARTED_AT]
+                ?.takeIf {
+                    preferences[Keys.BONUS_MISSION_STARTED_DAY] == today &&
+                        preferences[Keys.BONUS_MISSION_STARTED_CATEGORY] == primaryCategory.name
+                }
         ),
         unlockedAchievements = decodeAchievementIds(
             preferences[Keys.UNLOCKED_ACHIEVEMENTS]
@@ -780,7 +846,9 @@ class MvpRepository internal constructor(
         avatarHatColor = preferences[Keys.AVATAR_HAT_COLOR] ?: "#4B5367",
         ownedBundleIds = decodeIdSet(preferences[Keys.OWNED_BUNDLES]),
         soundEnabled = preferences[Keys.SOUND_ENABLED] ?: true,
-        vibrationEnabled = preferences[Keys.VIBRATION_ENABLED] ?: true
+        vibrationEnabled = preferences[Keys.VIBRATION_ENABLED] ?: true,
+        privacyNoticeVersion = preferences[Keys.PRIVACY_NOTICE_VERSION],
+        privacyNoticeAcknowledgedAtMillis = preferences[Keys.PRIVACY_NOTICE_ACKNOWLEDGED_AT]
         )
     }
 
@@ -896,6 +964,9 @@ class MvpRepository internal constructor(
         val CATEGORY_HISTORY = stringPreferencesKey("category_history")
         val PRIMARY_CATEGORY_CHANGED_DAY = longPreferencesKey("primary_category_changed_day")
         val LAST_BONUS_MISSION_DAY = longPreferencesKey("last_bonus_mission_day")
+        val BONUS_MISSION_STARTED_AT = longPreferencesKey("bonus_mission_started_at")
+        val BONUS_MISSION_STARTED_DAY = longPreferencesKey("bonus_mission_started_day")
+        val BONUS_MISSION_STARTED_CATEGORY = stringPreferencesKey("bonus_mission_started_category")
         val BONUS_MISSIONS_COMPLETED = intPreferencesKey("bonus_missions_completed")
         val UNLOCKED_ACHIEVEMENTS = stringPreferencesKey("unlocked_achievements")
         val TOTAL_COINS_EARNED = intPreferencesKey("total_coins_earned")
@@ -935,6 +1006,8 @@ class MvpRepository internal constructor(
         val ROUND_GLASSES = booleanPreferencesKey("round_glasses")
         val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         val VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
+        val PRIVACY_NOTICE_VERSION = stringPreferencesKey("privacy_notice_version")
+        val PRIVACY_NOTICE_ACKNOWLEDGED_AT = longPreferencesKey("privacy_notice_acknowledged_at")
         val ROOM_GOALS_MIGRATED = booleanPreferencesKey("room_goals_migrated")
         val PENDING_COMPLETIONS = stringPreferencesKey("pending_completions")
         val DEBUG_STORE_TEST_ACTIVE = booleanPreferencesKey("debug_store_test_active")
@@ -953,6 +1026,7 @@ class MvpRepository internal constructor(
     private companion object {
         val HEX_COLOR = Regex("^#[0-9A-Fa-f]{6}$")
         const val STORE_TEST_COINS = 500
+        const val PRIVACY_NOTICE_VERSION = "1.0"
         val completionMutex = Mutex()
     }
 }

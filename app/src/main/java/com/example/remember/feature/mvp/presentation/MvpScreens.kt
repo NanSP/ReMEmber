@@ -88,7 +88,8 @@ import com.example.remember.ui.theme.NeoButton
 import com.example.remember.ui.theme.NeoElement
 
 enum class MvpPage(val isRoot: Boolean = false) {
-    TODAY(true), GOALS(true), AVATAR(true), MORE(true), PROFILE, HISTORY, STORE(true), SETTINGS
+    TODAY(true), GOALS(true), AVATAR(true), MORE(true), PROFILE, HISTORY, STORE(true), SETTINGS,
+    PRIVACY
 }
 
 @Composable
@@ -102,6 +103,8 @@ fun OnboardingScreen(
         mutableStateOf(state.selectedBodyId.ifBlank { "body_03" })
     }
     var showError by rememberSaveable { mutableStateOf(false) }
+    var privacyAcknowledged by rememberSaveable { mutableStateOf(false) }
+    var showPrivacyError by rememberSaveable { mutableStateOf(false) }
     val previewConfiguration = AvatarConfiguration(
         AvatarCatalog.defaultConfiguration.equippedItemIds + (AvatarSlot.BODY to bodyItemId)
     )
@@ -173,9 +176,48 @@ fun OnboardingScreen(
         )
         Text(stringResource(R.string.primary_focus), fontWeight = FontWeight.Bold)
         CategorySelector(selected = category, onSelect = { category = it })
+        NeomorphicCard(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    stringResource(R.string.onboarding_privacy_notice),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NeoButton
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(R.string.onboarding_privacy_acknowledgment),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    NeomorphicSwitch(
+                        checked = privacyAcknowledged,
+                        onCheckedChange = {
+                            privacyAcknowledged = it
+                            showPrivacyError = false
+                        }
+                    )
+                }
+                if (showPrivacyError) {
+                    Text(
+                        stringResource(R.string.onboarding_privacy_required),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            }
+        }
         NeomorphicButton(
             onClick = {
-                if (name.isBlank()) showError = true else onContinue(name, category, bodyItemId)
+                showError = name.isBlank()
+                showPrivacyError = !privacyAcknowledged
+                if (!showError && !showPrivacyError) onContinue(name, category, bodyItemId)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -334,7 +376,7 @@ private fun EmptyGoals(onCreateGoal: () -> Unit) {
 fun GoalsScreen(
     state: MvpState,
     contentPadding: PaddingValues,
-    onSaveGoal: (Long?, String, GoalCategory, GoalRecurrence, Int?) -> Unit,
+    onSaveGoal: (Long?, String, GoalRecurrence, Int?) -> Unit,
     onCompleteGoal: (Long) -> Unit,
     onDeleteGoal: (Long) -> Unit
 ) {
@@ -410,8 +452,19 @@ fun GoalsScreen(
                         singleLine = true,
                         colors = neomorphicTextFieldColors()
                     )
-                    Text(stringResource(R.string.category), fontWeight = FontWeight.Bold)
-                    CategorySelector(category, onSelect = { category = it })
+                    Text(
+                        stringResource(R.string.goal_primary_category),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        categoryLabel(category),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .neomorphicInset(RoundedCornerShape(16.dp))
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     Text(stringResource(R.string.goal_recurrence), fontWeight = FontWeight.Bold)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -465,7 +518,6 @@ fun GoalsScreen(
                             onSaveGoal(
                                 editingGoalId,
                                 title,
-                                category,
                                 recurrence,
                                 reminderMinutes.takeIf { reminderEnabled }
                             )
@@ -892,6 +944,11 @@ fun MoreScreen(contentPadding: PaddingValues, onNavigate: (MvpPage) -> Unit) {
         item { MoreCard(R.string.profile, R.string.profile_description) { onNavigate(MvpPage.PROFILE) } }
         item { MoreCard(R.string.history_title, R.string.history_description) { onNavigate(MvpPage.HISTORY) } }
         item { MoreCard(R.string.settings, R.string.settings_description) { onNavigate(MvpPage.SETTINGS) } }
+        item {
+            MoreCard(R.string.privacy_title, R.string.privacy_more_description) {
+                onNavigate(MvpPage.PRIVACY)
+            }
+        }
     }
 }
 
