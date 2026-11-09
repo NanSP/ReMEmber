@@ -2,6 +2,7 @@ package com.example.remember.app
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -43,6 +44,7 @@ import com.example.remember.feature.mvp.presentation.ProfileScreen
 import com.example.remember.feature.mvp.presentation.PrivacyScreen
 import com.example.remember.feature.mvp.presentation.SettingsScreen
 import com.example.remember.feature.mvp.presentation.StoreScreen
+import com.example.remember.feature.mvp.presentation.backDestination
 import com.example.remember.feature.store.data.StorePurchaseResult
 import com.example.remember.feature.store.data.StoreCatalog
 import com.example.remember.ui.theme.NeoBackground
@@ -189,6 +191,11 @@ fun RememberMeApp(
 
     LaunchedEffect(Unit) {
         repository.rescheduleReminders()
+    }
+
+    val backDestination = page.backDestination()
+    BackHandler(enabled = backDestination != null) {
+        backDestination?.let { page = it }
     }
 
     Scaffold(
