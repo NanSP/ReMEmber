@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,8 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import com.example.remember.R
-import com.example.remember.ui.theme.NeoBackground
-import com.example.remember.ui.theme.NeoButton
 import kotlinx.coroutines.delay
 
 private val AlfaSlabOne = FontFamily(Font(R.font.alfa_slab_one_regular, FontWeight.Normal))
@@ -95,7 +94,7 @@ fun LoadingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NeoBackground)
+            .background(MaterialTheme.colorScheme.background)
             .semantics {
                 contentDescription = loadingDescription
             },
@@ -122,6 +121,7 @@ fun LoadingScreen(
 
 @Composable
 private fun BrandStage(stage: Int, fontSize: androidx.compose.ui.unit.TextUnit) {
+    val primaryColor = MaterialTheme.colorScheme.primary
     val text = when (stage) {
         0 -> "re"
         1 -> "remem"
@@ -131,7 +131,7 @@ private fun BrandStage(stage: Int, fontSize: androidx.compose.ui.unit.TextUnit) 
     if (text != null) {
         Text(
             text = text,
-            color = NeoButton,
+            color = primaryColor,
             fontFamily = AlfaSlabOne,
             fontSize = fontSize,
             fontWeight = FontWeight.Normal,
@@ -143,7 +143,7 @@ private fun BrandStage(stage: Int, fontSize: androidx.compose.ui.unit.TextUnit) 
 
     Text(
         text = buildAnnotatedString {
-            withStyle(SpanStyle(fontFamily = AlfaSlabOne, color = NeoButton)) {
+            withStyle(SpanStyle(fontFamily = AlfaSlabOne, color = primaryColor)) {
                 append("re")
             }
             withStyle(
@@ -151,7 +151,7 @@ private fun BrandStage(stage: Int, fontSize: androidx.compose.ui.unit.TextUnit) 
                     fontFamily = AnticSlab,
                     color = Color.White,
                     shadow = Shadow(
-                        color = NeoButton,
+                        color = primaryColor,
                         offset = Offset.Zero,
                         blurRadius = 2.2f
                     )
@@ -159,7 +159,7 @@ private fun BrandStage(stage: Int, fontSize: androidx.compose.ui.unit.TextUnit) 
             ) {
                 append("ME")
             }
-            withStyle(SpanStyle(fontFamily = AlfaSlabOne, color = NeoButton)) {
+            withStyle(SpanStyle(fontFamily = AlfaSlabOne, color = primaryColor)) {
                 append("mber")
             }
         },

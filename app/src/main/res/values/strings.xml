@@ -95,7 +95,7 @@
     <string name="hair">Cabelo</string>
     <string name="clothes">Roupa</string>
     <string name="more_title">Explore o ReMEmber</string>
-    <string name="more_description">Acesse seu progresso e conheça recursos do protótipo.</string>
+    <string name="more_description">Acompanhe seu progresso e personalize sua experiência.</string>
     <string name="profile">Perfil</string>
     <string name="profile_description">Estatísticas e foco principal</string>
     <string name="history_title">Histórico</string>
@@ -115,11 +115,11 @@
     </plurals>
     <string name="history_completed_at">%1$s · %2$s</string>
     <string name="settings">Configurações</string>
-    <string name="settings_description">Som, vibração e informações</string>
+    <string name="settings_description">Aparência, som, vibração e informações</string>
     <string name="back">Voltar</string>
     <string name="total_completions">Concluídos</string>
     <string name="longest_streak">Maior sequência</string>
-    <string name="profile_id">Perfil local</string>
+    <string name="profile_id">Dados do perfil</string>
     <string name="store_title">Loja de conjuntos</string>
     <string name="store_notice">Conclua objetivos para ganhar moedas, adquirir conjuntos e aplicá-los ao avatar.</string>
     <string name="store_balance">Seu saldo</string>
@@ -142,10 +142,16 @@
     <string name="store_purchase_error">Não foi possível concluir a compra.</string>
     <string name="store_equip_success">Conjunto aplicado ao avatar.</string>
     <string name="preferences">Preferências</string>
+    <string name="appearance">Aparência</string>
+    <string name="app_theme">Tema do aplicativo</string>
+    <string name="app_theme_description">Escolha um tema fixo ou acompanhe a configuração do celular.</string>
+    <string name="theme_system">Usar configuração do sistema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Escuro</string>
     <string name="sound">Som</string>
     <string name="vibration">Vibração</string>
-    <string name="notifications_notice">Som e vibração são aplicados aos lembretes. O período de silêncio ainda não está disponível.</string>
-    <string name="app_version">Versão de teste 1.0</string>
+    <string name="notifications_notice">Escolha como deseja receber os lembretes do ReMEmber.</string>
+    <string name="app_version">ReMEmber · versão 1.0</string>
     <string name="category_food">Alimentação e água</string>
     <string name="category_exercise">Exercício físico</string>
     <string name="category_simple_task">Tarefas simples</string>

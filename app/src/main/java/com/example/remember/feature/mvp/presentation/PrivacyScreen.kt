@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.remember.R
@@ -31,9 +32,7 @@ import com.example.remember.feature.mvp.domain.MvpState
 import com.example.remember.ui.components.NeomorphicButton
 import com.example.remember.ui.components.NeomorphicCard
 import com.example.remember.ui.components.neomorphicInset
-import com.example.remember.ui.theme.NeoBackground
-import com.example.remember.ui.theme.NeoButton
-import com.example.remember.ui.theme.NeoText
+import com.example.remember.ui.components.neomorphicTextFieldColors
 
 @Composable
 fun PrivacyScreen(
@@ -83,7 +82,7 @@ fun PrivacyScreen(
             ) {
                 Text(
                     stringResource(R.string.privacy_contact_url),
-                    color = NeoButton,
+                    color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.labelMedium
                 )
                 NeomorphicButton(
@@ -110,7 +109,7 @@ fun PrivacyScreen(
                         state.unlockedAchievements.size,
                         state.ownedBundleIds.size
                     ),
-                    color = NeoText,
+                    color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -128,12 +127,7 @@ fun PrivacyScreen(
                         .neomorphicInset(RoundedCornerShape(16.dp)),
                     label = { Text(stringResource(R.string.privacy_profile_name_label)) },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent
-                    )
+                    colors = neomorphicTextFieldColors()
                 )
                 NeomorphicButton(
                     onClick = { onUpdateProfileName(profileName) },
@@ -176,7 +170,7 @@ fun PrivacyScreen(
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
-            containerColor = NeoBackground,
+            containerColor = MaterialTheme.colorScheme.background,
             title = { Text(stringResource(R.string.privacy_delete_confirm_title)) },
             text = { Text(stringResource(R.string.privacy_delete_confirm_text)) },
             confirmButton = {
@@ -192,7 +186,7 @@ fun PrivacyScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmation = false }) {
-                    Text(stringResource(R.string.privacy_cancel_action), color = NeoButton)
+                    Text(stringResource(R.string.privacy_cancel_action), color = MaterialTheme.colorScheme.primary)
                 }
             }
         )
@@ -206,13 +200,14 @@ private fun PrivacyBackHeader(onBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         TextButton(onClick = onBack) {
-            Text("‹", style = MaterialTheme.typography.headlineMedium, color = NeoButton)
+            Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.primary)
         }
         Text(
             stringResource(R.string.privacy_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
-            color = NeoText
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.semantics { heading() }
         )
     }
 }
@@ -232,7 +227,8 @@ private fun PrivacySection(
                 stringResource(title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = NeoText
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.semantics { heading() }
             )
             Text(
                 stringResource(description),

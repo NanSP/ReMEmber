@@ -2,7 +2,9 @@ package com.example.remember.app
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -43,9 +45,10 @@ import com.example.remember.feature.mvp.presentation.ProfileScreen
 import com.example.remember.feature.mvp.presentation.PrivacyScreen
 import com.example.remember.feature.mvp.presentation.SettingsScreen
 import com.example.remember.feature.mvp.presentation.StoreScreen
+import com.example.remember.feature.mvp.presentation.backDestination
 import com.example.remember.feature.store.data.StorePurchaseResult
 import com.example.remember.feature.store.data.StoreCatalog
-import com.example.remember.ui.theme.NeoBackground
+import com.example.remember.ui.theme.AppThemeMode
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -58,7 +61,9 @@ fun RememberMeApp(
     storeTestAction: String? = null,
     historyPreview: Boolean = false,
     loadingPreviewStage: Int? = null,
-    launcherIconPreview: Boolean = false
+    launcherIconPreview: Boolean = false,
+    themeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    onThemeModeChange: (AppThemeMode) -> Unit = {}
 ) {
     if (launcherIconPreview) {
         LauncherIconPreviewScreen()
@@ -191,8 +196,13 @@ fun RememberMeApp(
         repository.rescheduleReminders()
     }
 
+    val backDestination = page.backDestination()
+    BackHandler(enabled = backDestination != null) {
+        backDestination?.let { page = it }
+    }
+
     Scaffold(
-        containerColor = NeoBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (page.isRoot) NeoBottomBar(page = page, onNavigate = { page = it })
@@ -340,6 +350,8 @@ fun RememberMeApp(
                 state = currentState,
                 contentPadding = contentPadding,
                 onBack = { page = MvpPage.MORE },
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
                 onSoundChange = { scope.launch { repository.setSoundEnabled(it) } },
                 onVibrationChange = { scope.launch { repository.setVibrationEnabled(it) } }
             )
@@ -367,6 +379,7 @@ fun RememberMeApp(
                 onDeleteAllData = {
                     scope.launch {
                         repository.deleteAllUserData()
+                        onThemeModeChange(AppThemeMode.SYSTEM)
                         page = MvpPage.TODAY
                     }
                 }

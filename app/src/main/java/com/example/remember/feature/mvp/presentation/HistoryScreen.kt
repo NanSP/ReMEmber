@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -26,6 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.remember.R
@@ -38,8 +41,6 @@ import com.example.remember.ui.components.NeomorphicButton
 import com.example.remember.ui.components.NeomorphicCard
 import com.example.remember.ui.components.NeomorphicChoice
 import com.example.remember.ui.components.neomorphicInset
-import com.example.remember.ui.theme.NeoBackground
-import com.example.remember.ui.theme.NeoButton
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -69,7 +70,7 @@ fun HistoryScreen(
     )
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(NeoBackground),
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(
             start = 20.dp,
             top = contentPadding.calculateTopPadding() + 12.dp,
@@ -155,8 +156,8 @@ private fun HistoryHeader(onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         NeomorphicButton(
             onClick = onBack,
-            backgroundColor = NeoBackground,
-            contentColor = NeoButton,
+            backgroundColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.primary,
             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Text(stringResource(R.string.back), fontWeight = FontWeight.Bold)
@@ -165,7 +166,8 @@ private fun HistoryHeader(onBack: () -> Unit) {
         Text(
             stringResource(R.string.history_title),
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Black
+            fontWeight = FontWeight.Black,
+            modifier = Modifier.semantics { heading() }
         )
     }
 }
@@ -179,8 +181,9 @@ private fun <T> HistoryFilterSection(
     label: @Composable (T) -> String = { it.toString() }
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, fontWeight = FontWeight.Bold, color = NeoButton)
+        Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
         LazyRow(
+            modifier = Modifier.selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(vertical = 4.dp)
         ) {
@@ -227,7 +230,7 @@ private fun HistoryMetric(value: String, label: String, modifier: Modifier = Mod
     ) {
         Column {
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = NeoButton)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -267,7 +270,7 @@ private fun HistoryCompletionCard(completion: CompletionHistoryItem) {
                     completion.experienceEarned,
                     completion.coinsEarned
                 ),
-                color = NeoButton,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
         }
