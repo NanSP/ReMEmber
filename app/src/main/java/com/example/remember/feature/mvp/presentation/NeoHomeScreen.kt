@@ -202,22 +202,24 @@ private fun NotificationsMenu(
             iconColor = MaterialTheme.colorScheme.onPrimary
         ) {
             Text("!", fontSize = 25.sp, fontWeight = FontWeight.Black)
-            if (notificationCount > 0) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(4.dp, (-4).dp)
-                        .size(21.dp)
-                        .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        notificationCount.coerceAtMost(99).toString(),
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                }
+        }
+        if (notificationCount > 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(5.dp, (-5).dp)
+                    .sizeIn(minWidth = 22.dp, minHeight = 22.dp)
+                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    notificationCount.coerceAtMost(99).toString(),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1
+                )
             }
         }
 
@@ -874,13 +876,18 @@ private fun GoalsPanel(
                 .fillMaxSize()
                 .padding(start = 16.dp, top = 16.dp, end = 16.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         stringResource(R.string.today_goals),
                         color = MaterialTheme.colorScheme.onBackground,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Black,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.semantics { heading() }
                     )
                     Text(
@@ -894,19 +901,20 @@ private fun GoalsPanel(
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
-                Text(
-                    text = "+",
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primary)
-                        .clickable(role = Role.Button, onClick = onCreateGoal)
-                        .semantics { contentDescription = addGoalDescription }
-                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                        .padding(horizontal = 14.dp, vertical = 5.dp)
-                )
+                NeomorphicIconButton(
+                    onClick = onCreateGoal,
+                    contentDescription = addGoalDescription,
+                    size = 52.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                    iconColor = MaterialTheme.colorScheme.onSecondaryContainer
+                ) {
+                    Text(
+                        text = "+",
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             Spacer(Modifier.height(8.dp))
             BonusMissionRow(
@@ -915,15 +923,7 @@ private fun GoalsPanel(
                 onComplete = onCompleteBonusMission
             )
             Spacer(Modifier.height(6.dp))
-            if (goals.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        stringResource(R.string.home_empty_goals),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            } else {
+            if (goals.isNotEmpty()) {
                 Box(Modifier.weight(1f)) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -999,7 +999,7 @@ private fun BonusMissionRow(
                 color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.labelLarge,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
@@ -1035,7 +1035,7 @@ private fun CompactGoal(goal: MvpGoal, onComplete: () -> Unit) {
             .background(MaterialTheme.colorScheme.background)
             .clickable(enabled = !goal.isCompleted, role = Role.Button, onClick = onComplete)
             .semantics { contentDescription = completeGoalDescription }
-            .sizeIn(minHeight = 48.dp)
+            .sizeIn(minHeight = 52.dp)
             .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1045,7 +1045,7 @@ private fun CompactGoal(goal: MvpGoal, onComplete: () -> Unit) {
             goal.title,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )

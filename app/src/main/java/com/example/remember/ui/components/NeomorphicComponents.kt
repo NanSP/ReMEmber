@@ -33,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.dropShadow
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Color
@@ -246,16 +245,30 @@ fun NeomorphicButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val surface = if (pressed && enabled) {
-        Modifier.neomorphicInset(shape, backgroundColor)
+    val resolvedBackgroundColor = if (enabled) {
+        backgroundColor
     } else {
-        Modifier.neomorphicElevated(shape, backgroundColor, shadowRadius = 7.dp, shadowOffset = 3.dp)
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    val resolvedContentColor = if (enabled) {
+        contentColor
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val surface = if (pressed && enabled) {
+        Modifier.neomorphicInset(shape, resolvedBackgroundColor)
+    } else {
+        Modifier.neomorphicElevated(
+            shape,
+            resolvedBackgroundColor,
+            shadowRadius = 7.dp,
+            shadowOffset = 3.dp
+        )
     }
 
     Row(
         modifier = modifier
             .then(surface)
-            .alpha(if (enabled) 1f else 0.5f)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -267,7 +280,7 @@ fun NeomorphicButton(
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CompositionLocalProvider(LocalContentColor provides contentColor) {
+        CompositionLocalProvider(LocalContentColor provides resolvedContentColor) {
             content()
         }
     }
@@ -379,10 +392,10 @@ fun neomorphicTextFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.col
     disabledContainerColor = Color.Transparent,
     errorContainerColor = Color.Transparent,
     cursorColor = MaterialTheme.colorScheme.primary,
-    focusedBorderColor = MaterialTheme.colorScheme.primary,
-    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-    disabledBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
-    errorBorderColor = MaterialTheme.colorScheme.error,
+    focusedBorderColor = Color.Transparent,
+    unfocusedBorderColor = Color.Transparent,
+    disabledBorderColor = Color.Transparent,
+    errorBorderColor = Color.Transparent,
     focusedLabelColor = MaterialTheme.colorScheme.primary,
     unfocusedLabelColor = MaterialTheme.colorScheme.onSurface,
     disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),

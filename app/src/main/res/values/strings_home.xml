@@ -43,7 +43,6 @@
         <item quantity="one">%1$d de %2$d concluído</item>
         <item quantity="other">%1$d de %2$d concluídos</item>
     </plurals>
-    <string name="home_empty_goals">Sua jornada começa com um pequeno objetivo.</string>
     <string name="home_add_goal">Adicionar objetivo</string>
     <string name="home_complete_goal">Concluir %1$s</string>
     <string name="home_nav_home">Início</string>
