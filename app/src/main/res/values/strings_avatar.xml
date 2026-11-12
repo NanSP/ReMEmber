@@ -23,7 +23,7 @@
     <string name="avatar_glasses_color">Cor dos óculos</string>
     <string name="avatar_shirt_color">Cor da roupa</string>
     <string name="avatar_hat_color">Cor do chapéu</string>
-    <string name="avatar_color_option">Cor %1$s</string>
+    <string name="avatar_color_option_position">Tom %1$d de %2$d</string>
 
     <string name="avatar_body_classic">Clássico</string>
     <string name="avatar_body_athletic">Atlético</string>
@@ -64,7 +64,7 @@
     <string name="avatar_shirt_striped">Listrada</string>
     <string name="avatar_shirt_print">Estampada</string>
     <string name="avatar_shirt_suit">Terno e gravata</string>
-    <string name="avatar_shirt_tank">Camiseta manga curta</string>
+    <string name="avatar_shirt_tank">Camiseta de manga curta</string>
     <string name="avatar_shirt_hoodie">Moletom</string>
     <string name="avatar_shirt_turtleneck">Gola alta</string>
     <string name="avatar_hat_none">Sem chapéu</string>

@@ -1,12 +1,18 @@
 <resources>
-    <string name="home_focus_description">Selecionar objetivo principal</string>
+    <string name="home_focus_description">Objetivo principal: %1$s. Toque para selecionar outro</string>
     <plurals name="home_focus_lock_status">
         <item quantity="one">Nova troca disponível em %1$d dia</item>
         <item quantity="other">Nova troca disponível em %1$d dias</item>
     </plurals>
     <string name="home_focus_label">Foco</string>
-    <string name="home_streak_description">Sequência atual</string>
-    <string name="home_coins_description">Saldo de moedas</string>
+    <plurals name="home_streak_description">
+        <item quantity="one">%1$d dia de sequência atual</item>
+        <item quantity="other">%1$d dias de sequência atual</item>
+    </plurals>
+    <plurals name="home_coins_description">
+        <item quantity="one">Saldo de %1$d moeda</item>
+        <item quantity="other">Saldo de %1$d moedas</item>
+    </plurals>
     <string name="home_level_short">NV. %1$d</string>
     <string name="home_xp_description">Progresso: %1$d de 100 XP</string>
     <string name="home_help_open_description">Explicar os campos da tela inicial</string>

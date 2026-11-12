@@ -6,16 +6,25 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.graphics.drawable.toBitmap
 import com.example.remember.app.RememberMeApp
 import com.example.remember.feature.goals.domain.model.GoalCategory
 import com.example.remember.ui.theme.ReMEmberTheme
+import com.example.remember.ui.theme.AppThemeMode
+import com.example.remember.ui.theme.AppThemePreference
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyTaskDescription()
         enableEdgeToEdge()
+        val themePreference = AppThemePreference(this)
+        val initialThemeMode = themePreference.read()
         val isDebuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         val scenePreviewStreak = if (isDebuggable) {
             intent.getIntExtra(EXTRA_SCENE_PREVIEW_STREAK, -1).takeIf { it >= 0 }
@@ -53,7 +62,17 @@ class MainActivity : ComponentActivity() {
         val launcherIconPreview =
             isDebuggable && intent.getBooleanExtra(EXTRA_LAUNCHER_ICON_PREVIEW, false)
         setContent {
-            ReMEmberTheme {
+            var themeMode by remember { mutableStateOf(initialThemeMode) }
+            val systemDarkTheme = isSystemInDarkTheme()
+            val darkTheme = when (themeMode) {
+                AppThemeMode.SYSTEM -> systemDarkTheme
+                AppThemeMode.LIGHT -> false
+                AppThemeMode.DARK -> true
+            }
+            LaunchedEffect(darkTheme) {
+                applyTaskDescription(darkTheme)
+            }
+            ReMEmberTheme(darkTheme = darkTheme) {
                 RememberMeApp(
                     scenePreviewStreak = scenePreviewStreak,
                     scenePreviewCategory = scenePreviewCategory,
@@ -62,14 +81,19 @@ class MainActivity : ComponentActivity() {
                     storeTestAction = storeTestAction,
                     historyPreview = historyPreview,
                     loadingPreviewStage = loadingPreviewStage,
-                    launcherIconPreview = launcherIconPreview
+                    launcherIconPreview = launcherIconPreview,
+                    themeMode = themeMode,
+                    onThemeModeChange = { mode ->
+                        themePreference.write(mode)
+                        themeMode = mode
+                    }
                 )
             }
         }
     }
 
     @Suppress("DEPRECATION")
-    private fun applyTaskDescription() {
+    private fun applyTaskDescription(darkTheme: Boolean) {
         val taskIcon = applicationInfo.loadIcon(packageManager).toBitmap(
             width = TASK_ICON_SIZE,
             height = TASK_ICON_SIZE
@@ -78,7 +102,9 @@ class MainActivity : ComponentActivity() {
             ActivityManager.TaskDescription(
                 getString(R.string.app_name),
                 taskIcon,
-                getColor(R.color.neo_background)
+                getColor(
+                    if (darkTheme) R.color.neo_background_dark else R.color.neo_background
+                )
             )
         )
     }

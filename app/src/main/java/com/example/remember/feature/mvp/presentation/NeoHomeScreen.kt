@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -77,10 +80,6 @@ import com.example.remember.feature.scenes.data.SceneCatalog
 import com.example.remember.ui.components.NeomorphicCard
 import com.example.remember.ui.components.NeomorphicIconButton
 import com.example.remember.ui.components.NeomorphicProgressBar
-import com.example.remember.ui.theme.NeoBackground
-import com.example.remember.ui.theme.NeoButton
-import com.example.remember.ui.theme.NeoElement
-import com.example.remember.ui.theme.NeoText
 import kotlinx.coroutines.delay
 
 @Composable
@@ -101,11 +100,12 @@ fun NeoTodayScreen(
     var notificationsExpanded by rememberSaveable { mutableStateOf(false) }
     val pendingGoals = state.goals.filterNot { it.isCompleted }
     val footerInset = contentPadding.calculateBottomPadding()
+    val fontScale = LocalDensity.current.fontScale.coerceIn(1f, 1.55f)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NeoBackground)
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .padding(
                 start = 16.dp,
@@ -128,7 +128,7 @@ fun NeoTodayScreen(
         NeomorphicCard(
             modifier = Modifier.fillMaxWidth().weight(1f),
             shape = RoundedCornerShape(28.dp),
-            backgroundColor = NeoBackground
+            backgroundColor = MaterialTheme.colorScheme.background
         ) {
             Box(Modifier.fillMaxSize().clip(RoundedCornerShape(28.dp))) {
                 SceneBackdrop(
@@ -161,7 +161,9 @@ fun NeoTodayScreen(
         }
 
         GoalsPanel(
-            modifier = Modifier.fillMaxWidth().height(226.dp + footerInset),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(226.dp * fontScale + footerInset),
             goals = state.goals,
             bonusMission = state.bonusMission,
             onCreateGoal = onCreateGoal,
@@ -196,8 +198,8 @@ private fun NotificationsMenu(
             contentDescription = countDescription,
             size = 52.dp,
             shape = CircleShape,
-            backgroundColor = NeoButton,
-            iconColor = Color.White
+            backgroundColor = MaterialTheme.colorScheme.primary,
+            iconColor = MaterialTheme.colorScheme.onPrimary
         ) {
             Text("!", fontSize = 25.sp, fontWeight = FontWeight.Black)
             if (notificationCount > 0) {
@@ -206,12 +208,12 @@ private fun NotificationsMenu(
                         .align(Alignment.TopEnd)
                         .offset(4.dp, (-4).dp)
                         .size(21.dp)
-                        .background(NeoElement, CircleShape),
+                        .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         notificationCount.coerceAtMost(99).toString(),
-                        color = NeoButton,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black
                     )
@@ -222,11 +224,11 @@ private fun NotificationsMenu(
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = onDismiss,
-            modifier = Modifier.width(286.dp).background(NeoBackground)
+            modifier = Modifier.width(286.dp).background(MaterialTheme.colorScheme.background)
         ) {
             Text(
                 stringResource(R.string.home_notifications_title),
-                color = NeoText,
+                color = MaterialTheme.colorScheme.onBackground,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
@@ -237,7 +239,7 @@ private fun NotificationsMenu(
                         Column {
                             Text(
                                 stringResource(R.string.streak_recovery_title),
-                                color = NeoText,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
@@ -246,7 +248,7 @@ private fun NotificationsMenu(
                                     recoveriesRemaining,
                                     recoveriesRemaining
                                 ),
-                                color = NeoText,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 style = MaterialTheme.typography.labelSmall
                             )
                         }
@@ -260,7 +262,7 @@ private fun NotificationsMenu(
             if (pendingGoals.isEmpty() && !canRecoverStreak) {
                 Text(
                     stringResource(R.string.home_notifications_empty),
-                    color = NeoText,
+                    color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
@@ -271,14 +273,14 @@ private fun NotificationsMenu(
                             Column {
                                 Text(
                                     goal.title,
-                                    color = NeoText,
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     neoCategoryLabel(goal.category),
-                                    color = NeoText,
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             }
@@ -300,12 +302,12 @@ private fun HomeHeader(
     onSelectPrimaryCategory: (GoalCategory) -> Unit
 ) {
     NeomorphicCard(
-        modifier = Modifier.fillMaxWidth().height(76.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 76.dp),
         shape = RoundedCornerShape(22.dp),
-        backgroundColor = NeoBackground
+        backgroundColor = MaterialTheme.colorScheme.background
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(Modifier.weight(1.2f)) {
@@ -318,13 +320,16 @@ private fun HomeHeader(
                     },
                     value = null,
                     label = stringResource(R.string.home_focus_label),
-                    description = stringResource(R.string.home_focus_description),
+                    description = stringResource(
+                        R.string.home_focus_description,
+                        neoCategoryLabel(state.primaryCategory)
+                    ),
                     onClick = onOpenFocusMenu
                 )
                 DropdownMenu(
                     expanded = focusMenuExpanded,
                     onDismissRequest = onDismissFocusMenu,
-                    modifier = Modifier.background(NeoBackground)
+                    modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 ) {
                     GoalCategory.entries.forEach { category ->
                         DropdownMenuItem(
@@ -335,7 +340,7 @@ private fun HomeHeader(
                                         modifier = Modifier.size(24.dp)
                                     )
                                     Spacer(Modifier.width(12.dp))
-                                    Text(neoCategoryLabel(category), color = NeoText)
+                                    Text(neoCategoryLabel(category), color = MaterialTheme.colorScheme.onBackground)
                                 }
                             },
                             onClick = {
@@ -355,7 +360,7 @@ private fun HomeHeader(
                                         state.primaryCategoryChangeDaysRemaining,
                                         state.primaryCategoryChangeDaysRemaining
                                     ),
-                                    color = NeoText
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                             },
                             onClick = {},
@@ -369,14 +374,18 @@ private fun HomeHeader(
                 icon = {
                     Text(
                         "\u2726",
-                        color = NeoButton,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 19.sp,
                         fontWeight = FontWeight.Black
                     )
                 },
                 value = state.currentStreak.toString(),
                 label = "",
-                description = stringResource(R.string.home_streak_description),
+                description = pluralStringResource(
+                    R.plurals.home_streak_description,
+                    state.currentStreak,
+                    state.currentStreak
+                ),
                 glow = true,
                 emphasizeValue = true
             )
@@ -385,14 +394,18 @@ private fun HomeHeader(
                 icon = {
                     Text(
                         "\u25C8",
-                        color = NeoButton,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 19.sp,
                         fontWeight = FontWeight.Black
                     )
                 },
                 value = state.coins.toString(),
                 label = stringResource(R.string.coins),
-                description = stringResource(R.string.home_coins_description)
+                description = pluralStringResource(
+                    R.plurals.home_coins_description,
+                    state.coins,
+                    state.coins
+                )
             )
         }
     }
@@ -430,7 +443,7 @@ private fun HeaderMetric(
 
     Row(
         modifier = modifier
-            .fillMaxHeight()
+            .heightIn(min = 60.dp)
             .then(interactionModifier)
             .semantics { contentDescription = description }
             .padding(horizontal = 4.dp),
@@ -449,7 +462,7 @@ private fun HeaderMetric(
             if (value != null) {
                 Text(
                     value,
-                    color = if (emphasizeValue) NeoButton else NeoText,
+                    color = if (emphasizeValue) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
                     style = if (emphasizeValue) {
                         MaterialTheme.typography.headlineMedium
                     } else {
@@ -463,7 +476,7 @@ private fun HeaderMetric(
             if (label.isNotBlank()) {
                 Text(
                     label,
-                    color = NeoText,
+                    color = MaterialTheme.colorScheme.onBackground,
                     style = if (value == null) {
                         MaterialTheme.typography.titleSmall
                     } else {
@@ -480,9 +493,9 @@ private fun HeaderMetric(
 
 @Composable
 private fun CategoryHeaderIcon(category: GoalCategory, modifier: Modifier = Modifier) {
+    val iconColor = MaterialTheme.colorScheme.primary
     Canvas(modifier = modifier) {
         val line = 2.2.dp.toPx()
-        val iconColor = NeoButton
         when (category) {
             GoalCategory.EXERCISE -> {
                 drawLine(
@@ -615,30 +628,30 @@ private fun NeoXpBar(state: MvpState) {
     )
     val helpDescription = stringResource(R.string.home_help_open_description)
     NeomorphicCard(
-        modifier = Modifier.fillMaxWidth().height(48.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         shape = RoundedCornerShape(16.dp),
-        backgroundColor = NeoBackground
+        backgroundColor = MaterialTheme.colorScheme.background
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 stringResource(R.string.home_level_short, state.level),
-                color = NeoButton,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Black
             )
             Spacer(Modifier.width(12.dp))
             NeomorphicProgressBar(
                 progress = state.levelProgress,
                 modifier = Modifier.weight(1f),
-                progressColor = NeoButton,
-                trackColor = NeoBackground
+                progressColor = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.background
             )
             Spacer(Modifier.width(10.dp))
             Text(
                 text = "${state.experience % MvpState.EXPERIENCE_PER_LEVEL}/100",
-                color = NeoText,
+                color = MaterialTheme.colorScheme.onBackground,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.semantics { contentDescription = xpDescription }
@@ -647,23 +660,24 @@ private fun NeoXpBar(state: MvpState) {
             Box {
                 Box(
                     modifier = Modifier
-                        .size(26.dp)
-                        .background(NeoElement, CircleShape)
-                        .clickable(
-                            role = Role.Button,
-                            onClick = { helpExpanded = true }
-                        )
-                        .semantics {
-                            contentDescription = helpDescription
-                        },
+                        .size(48.dp)
+                        .clickable(role = Role.Button) { helpExpanded = true }
+                        .semantics { contentDescription = helpDescription },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "?",
-                        color = NeoButton,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 15.sp
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "?",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 15.sp
+                        )
+                    }
                 }
                 HomeHelpMenu(
                     expanded = helpExpanded,
@@ -679,11 +693,11 @@ private fun HomeHelpMenu(expanded: Boolean, onDismiss: () -> Unit) {
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
-        modifier = Modifier.width(304.dp).background(NeoBackground)
+        modifier = Modifier.width(304.dp).background(MaterialTheme.colorScheme.background)
     ) {
         Text(
             stringResource(R.string.home_help_title),
-            color = NeoText,
+            color = MaterialTheme.colorScheme.onBackground,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Black,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
@@ -707,13 +721,13 @@ private fun HomeHelpItem(title: Int, description: Int) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 7.dp)) {
         Text(
             stringResource(title),
-            color = NeoButton,
+            color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold
         )
         Text(
             stringResource(description),
-            color = NeoText,
+            color = MaterialTheme.colorScheme.onBackground,
             style = MaterialTheme.typography.bodySmall
         )
     }
@@ -760,7 +774,7 @@ private fun SceneBackdrop(category: GoalCategory, longestStreak: Int) {
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .height(72.dp)
-                .background(NeoElement.copy(alpha = 0.35f))
+                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f))
         )
         scene.layers.forEach { layer ->
             AsyncImage(
@@ -783,7 +797,7 @@ private fun SceneBackdrop(category: GoalCategory, longestStreak: Int) {
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(14.dp)
-                .background(NeoButton.copy(alpha = 0.88f), RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.88f), RoundedCornerShape(12.dp))
                 .padding(horizontal = 10.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.End
         ) {
@@ -793,7 +807,7 @@ private fun SceneBackdrop(category: GoalCategory, longestStreak: Int) {
                     scene.currentStep,
                     scene.totalSteps
                 ),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Black
             )
@@ -804,14 +818,14 @@ private fun SceneBackdrop(category: GoalCategory, longestStreak: Int) {
                         scene.daysUntilNextStage,
                         scene.daysUntilNextStage
                     ),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.labelSmall
                 )
             }
             if (seasonTitle != null) {
                 Text(
                     stringResource(R.string.home_scene_season_title, seasonTitle),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -823,7 +837,7 @@ private fun SceneBackdrop(category: GoalCategory, longestStreak: Int) {
                         daysUntilSeasonReward,
                         daysUntilSeasonReward
                     ),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.labelSmall
                 )
             }
@@ -853,7 +867,7 @@ private fun GoalsPanel(
             bottomStart = 0.dp,
             bottomEnd = 0.dp
         ),
-        backgroundColor = NeoElement
+        backgroundColor = MaterialTheme.colorScheme.secondaryContainer
     ) {
         Column(
             Modifier
@@ -864,9 +878,10 @@ private fun GoalsPanel(
                 Column(Modifier.weight(1f)) {
                     Text(
                         stringResource(R.string.today_goals),
-                        color = NeoText,
+                        color = MaterialTheme.colorScheme.onBackground,
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.semantics { heading() }
                     )
                     Text(
                         pluralStringResource(
@@ -875,20 +890,21 @@ private fun GoalsPanel(
                             completed,
                             goals.size
                         ),
-                        color = NeoText,
+                        color = MaterialTheme.colorScheme.onBackground,
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
                 Text(
                     text = "+",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(NeoButton)
+                        .background(MaterialTheme.colorScheme.primary)
                         .clickable(role = Role.Button, onClick = onCreateGoal)
                         .semantics { contentDescription = addGoalDescription }
+                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         .padding(horizontal = 14.dp, vertical = 5.dp)
                 )
             }
@@ -903,7 +919,7 @@ private fun GoalsPanel(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         stringResource(R.string.home_empty_goals),
-                        color = NeoText,
+                        color = MaterialTheme.colorScheme.onBackground,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -965,21 +981,22 @@ private fun BonusMissionRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(NeoBackground)
+            .background(MaterialTheme.colorScheme.background)
             .clickable(
                 enabled = !mission.completed && (!mission.isStarted || canComplete),
                 role = Role.Button,
                 onClick = onAction
             )
+            .sizeIn(minHeight = 48.dp)
             .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("★", color = NeoButton, fontSize = 18.sp)
+        Text("★", color = MaterialTheme.colorScheme.primary, fontSize = 18.sp)
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 title,
-                color = NeoText,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.labelLarge,
                 maxLines = 1,
@@ -987,14 +1004,14 @@ private fun BonusMissionRow(
             )
             Text(
                 stringResource(R.string.bonus_mission_reward),
-                color = NeoText,
+                color = MaterialTheme.colorScheme.onBackground,
                 style = MaterialTheme.typography.labelSmall
             )
         }
         Spacer(Modifier.width(8.dp))
         Text(
             action,
-            color = NeoButton,
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Black,
             style = MaterialTheme.typography.labelMedium
         )
@@ -1015,17 +1032,18 @@ private fun CompactGoal(goal: MvpGoal, onComplete: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(NeoBackground)
+            .background(MaterialTheme.colorScheme.background)
             .clickable(enabled = !goal.isCompleted, role = Role.Button, onClick = onComplete)
             .semantics { contentDescription = completeGoalDescription }
+            .sizeIn(minHeight = 48.dp)
             .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(categorySymbol(goal.category), color = NeoButton, fontSize = 18.sp)
+        Text(categorySymbol(goal.category), color = MaterialTheme.colorScheme.primary, fontSize = 18.sp)
         Spacer(Modifier.width(10.dp))
         Text(
             goal.title,
-            color = NeoText,
+            color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1033,7 +1051,7 @@ private fun CompactGoal(goal: MvpGoal, onComplete: () -> Unit) {
         )
         Text(
             if (goal.isCompleted) "\u2713" else "\u25CB",
-            color = NeoButton,
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 20.sp
         )
     }
@@ -1050,8 +1068,8 @@ fun NeoBottomBar(page: MvpPage, onNavigate: (MvpPage) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(NeoBackground)
-            .height(96.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .heightIn(min = 96.dp)
             .navigationBarsPadding()
             .padding(start = 18.dp, top = 8.dp, end = 18.dp, bottom = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1065,6 +1083,7 @@ fun NeoBottomBar(page: MvpPage, onNavigate: (MvpPage) -> Unit) {
                     onClick = { onNavigate(destination) },
                     contentDescription = stringResource(label),
                     active = selected,
+                    selected = selected,
                     size = 48.dp,
                     shape = RoundedCornerShape(14.dp),
                 ) {
@@ -1072,7 +1091,7 @@ fun NeoBottomBar(page: MvpPage, onNavigate: (MvpPage) -> Unit) {
                 }
                 Text(
                     stringResource(label),
-                    color = NeoText,
+                    color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                 )

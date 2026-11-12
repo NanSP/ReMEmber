@@ -8,10 +8,10 @@
     <string name="onboarding_privacy_required">Confirme a leitura do aviso para continuar.</string>
 
     <string name="privacy_overview_title">Resumo do tratamento</string>
-    <string name="privacy_overview_text">O ReMEmber funciona localmente. O app não possui conta on-line, não declara acesso à internet e não envia automaticamente dados para servidores, publicidade ou ferramentas de análise.</string>
+    <string name="privacy_overview_text">O ReMEmber mantém seus dados neste aparelho. Não é necessário criar uma conta, e suas informações não são enviadas automaticamente para servidores, publicidade ou serviços de análise.</string>
 
     <string name="privacy_controller_title">Responsável e contato</string>
-    <string name="privacy_controller_text">Responsável pelo tratamento neste protótipo: mantenedor do projeto ReMEmber (NanSP). Solicitações, correções e dúvidas podem ser registradas no canal público do projeto.</string>
+    <string name="privacy_controller_text">Responsável pelo tratamento dos dados: equipe ReMEmber (NanSP). Use o canal de contato abaixo para enviar solicitações, pedir correções ou esclarecer dúvidas.</string>
     <string name="privacy_contact_action">Abrir canal de contato</string>
     <string name="privacy_contact_url">github.com/NanSP/RememberMe/issues</string>
     <string name="privacy_contact_url_full" translatable="false">https://github.com/NanSP/RememberMe/issues</string>
@@ -20,16 +20,16 @@
     <string name="privacy_data_text">Nome do perfil; categoria principal; títulos, categorias, recorrências e horários dos objetivos; histórico de conclusões; XP, moedas, sequência e conquistas; aparência do avatar e itens adquiridos; preferências de som e vibração. O app não solicita CPF, e-mail, localização, contatos, fotos, microfone ou dados financeiros.</string>
 
     <string name="privacy_purpose_title">Finalidades e necessidade</string>
-    <string name="privacy_purpose_text">Os dados são usados somente para executar as funções solicitadas: organizar objetivos, disparar lembretes, calcular progresso e recompensas, montar o avatar e evoluir cenários. O protótipo adota como fundamento a execução dessas funcionalidades a pedido do usuário e limita a coleta ao necessário.</string>
+    <string name="privacy_purpose_text">Os dados são usados somente para organizar seus objetivos, enviar lembretes, calcular progresso e recompensas, personalizar o avatar e evoluir os cenários. O ReMEmber utiliza apenas as informações necessárias para oferecer essas funções.</string>
 
     <string name="privacy_storage_title">Armazenamento, retenção e segurança</string>
-    <string name="privacy_storage_text">Os registros ficam no armazenamento privado do aplicativo, usando Room e DataStore. Backups em nuvem e transferência automática entre aparelhos estão desativados. Os dados permanecem até você usar “Excluir todos os meus dados” ou desinstalar o app.</string>
+    <string name="privacy_storage_text">Os registros ficam no espaço privado do ReMEmber neste aparelho. Não há cópia automática na nuvem nem transferência automática para outros aparelhos. Os dados permanecem até você usar “Excluir todos os meus dados” ou desinstalar o app.</string>
 
-    <string name="privacy_permissions_title">Permissões do Android</string>
+    <string name="privacy_permissions_title">Permissões utilizadas</string>
     <string name="privacy_permissions_text">Notificações: exibir lembretes. Alarmes exatos: avisar no horário escolhido. Inicialização concluída: restaurar lembretes após reiniciar o aparelho. Essas permissões não dão acesso ao conteúdo de outros aplicativos.</string>
 
     <string name="privacy_sharing_title">Compartilhamento</string>
-    <string name="privacy_sharing_text">Não há compartilhamento automático. Ao escolher exportar, o Android abrirá o seletor de compartilhamento e somente o aplicativo escolhido por você receberá a cópia em JSON.</string>
+    <string name="privacy_sharing_text">Não há compartilhamento automático. Ao exportar seus dados, você escolhe com qual aplicativo deseja compartilhar a cópia.</string>
 
     <string name="privacy_rights_title">Seus controles</string>
     <string name="privacy_rights_text">Nesta tela você pode consultar um resumo, corrigir o nome do perfil, obter uma cópia estruturada e eliminar todos os dados locais. Objetivos também podem ser corrigidos ou excluídos na tela Objetivos.</string>
@@ -42,7 +42,7 @@
     <string name="privacy_name_updated">Nome do perfil atualizado.</string>
 
     <string name="privacy_export_title">Acesso e cópia dos dados</string>
-    <string name="privacy_export_description">Gera uma cópia legível em JSON para você revisar ou guardar.</string>
+    <string name="privacy_export_description">Crie uma cópia dos seus dados para revisar ou guardar.</string>
     <string name="privacy_export_action">Exportar meus dados</string>
     <string name="privacy_export_chooser">Compartilhar dados do ReMEmber</string>
     <string name="privacy_export_subject">Cópia dos meus dados do ReMEmber</string>

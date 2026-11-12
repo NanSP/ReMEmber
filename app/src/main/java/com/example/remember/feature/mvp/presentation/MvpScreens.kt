@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,13 +20,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
@@ -54,6 +58,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
@@ -83,9 +92,7 @@ import com.example.remember.ui.components.NeomorphicChoice
 import com.example.remember.ui.components.NeomorphicProgressBar
 import com.example.remember.ui.components.NeomorphicSwitch
 import com.example.remember.ui.components.neomorphicInset
-import com.example.remember.ui.theme.NeoBackground
-import com.example.remember.ui.theme.NeoButton
-import com.example.remember.ui.theme.NeoElement
+import com.example.remember.ui.theme.AppThemeMode
 
 enum class MvpPage(val isRoot: Boolean = false) {
     TODAY(true), GOALS(true), AVATAR(true), MORE(true), PROFILE, HISTORY, STORE(true), SETTINGS,
@@ -112,7 +119,7 @@ fun OnboardingScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NeoBackground)
+            .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 40.dp),
@@ -125,20 +132,21 @@ fun OnboardingScreen(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = stringResource(R.string.onboarding_eyebrow),
-                    color = NeoButton,
+                    color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = stringResource(R.string.onboarding_title),
-                    color = NeoButton,
+                    color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Black
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.semantics { heading() }
                 )
                 Text(
                     text = stringResource(R.string.onboarding_description),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = NeoButton
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -155,7 +163,16 @@ fun OnboardingScreen(
             isError = showError,
             colors = neomorphicTextFieldColors(),
             supportingText = {
-                if (showError) Text(stringResource(R.string.name_required))
+                if (showError) {
+                    val message = stringResource(R.string.name_required)
+                    Text(
+                        message,
+                        modifier = Modifier.semantics {
+                            error(message)
+                            liveRegion = LiveRegionMode.Polite
+                        }
+                    )
+                }
             }
         )
         Box(
@@ -184,7 +201,7 @@ fun OnboardingScreen(
                 Text(
                     stringResource(R.string.onboarding_privacy_notice),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NeoButton
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -192,12 +209,15 @@ fun OnboardingScreen(
                 ) {
                     Text(
                         stringResource(R.string.onboarding_privacy_acknowledgment),
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).clearAndSetSemantics { },
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
                     NeomorphicSwitch(
                         checked = privacyAcknowledged,
+                        contentDescription = stringResource(
+                            R.string.onboarding_privacy_acknowledgment
+                        ),
                         onCheckedChange = {
                             privacyAcknowledged = it
                             showPrivacyError = false
@@ -205,10 +225,15 @@ fun OnboardingScreen(
                     )
                 }
                 if (showPrivacyError) {
+                    val message = stringResource(R.string.onboarding_privacy_required)
                     Text(
-                        stringResource(R.string.onboarding_privacy_required),
+                        message,
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.semantics {
+                            error(message)
+                            liveRegion = LiveRegionMode.Polite
+                        }
                     )
                 }
             }
@@ -467,7 +492,7 @@ fun GoalsScreen(
                     )
                     Text(stringResource(R.string.goal_recurrence), fontWeight = FontWeight.Bold)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().selectableGroup(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         GoalRecurrence.entries.forEach { option ->
@@ -497,6 +522,7 @@ fun GoalsScreen(
                         }
                         NeomorphicSwitch(
                             checked = reminderEnabled,
+                            contentDescription = stringResource(R.string.goal_reminder),
                             onCheckedChange = { enabled ->
                                 reminderEnabled = enabled
                                 if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -540,7 +566,14 @@ fun GoalsScreen(
                 }
             }
         }
-        item { Text(stringResource(R.string.active_goals), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
+        item {
+            Text(
+                stringResource(R.string.active_goals),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() }
+            )
+        }
         if (state.goals.isEmpty()) {
             item { Text(stringResource(R.string.empty_goals), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         } else {
@@ -565,7 +598,7 @@ private fun GoalCard(
 ) {
     NeomorphicCard(
         modifier = Modifier.fillMaxWidth(),
-        backgroundColor = if (goal.isCompleted) NeoElement else NeoBackground
+        backgroundColor = if (goal.isCompleted) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
@@ -738,7 +771,7 @@ private fun AvatarGroupTabs(selected: AvatarEditorGroup, onSelect: (AvatarEditor
             fontWeight = FontWeight.Bold
         )
         LazyRow(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
         ) {
@@ -773,10 +806,16 @@ internal fun AvatarGroupPanel(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(stringResource(title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() }
+            )
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .selectableGroup()
                     .testTag("avatar_options_$title"),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
@@ -787,7 +826,7 @@ internal fun AvatarGroupPanel(
                         onClick = { onSelect(id) },
                         modifier = Modifier
                             .width(156.dp)
-                            .height(72.dp)
+                            .heightIn(min = 72.dp)
                             .testTag("avatar_option_$id")
                     ) {
                         Text(
@@ -811,12 +850,18 @@ internal fun AvatarGroupPanel(
 @Composable
 private fun AvatarColorRow(colors: List<String>, selected: String, onSelect: (String) -> Unit) {
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = PaddingValues(4.dp)
     ) {
-        items(colors, key = { it }) { hex ->
-            AvatarColorSwatch(hex, selected.equals(hex, ignoreCase = true), onSelect)
+        itemsIndexed(colors, key = { _, hex -> hex }) { index, hex ->
+            AvatarColorSwatch(
+                hex = hex,
+                isSelected = selected.equals(hex, ignoreCase = true),
+                position = index + 1,
+                total = colors.size,
+                onSelect = onSelect
+            )
         }
     }
 }
@@ -830,8 +875,15 @@ private fun ChoiceSection(
     onSelect: (String) -> Unit
 ) {
     NeomorphicCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(title), fontWeight = FontWeight.Bold)
+        Column(
+            Modifier.padding(16.dp).selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                stringResource(title),
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() }
+            )
             val visibleChoices = if (optional) listOf("" to R.string.avatar_none) + choices else choices
             visibleChoices.forEach { (id, label) ->
                 NeomorphicChoice(
@@ -858,11 +910,18 @@ private fun ColorChoiceSection(
         ) {
             Text(stringResource(title), fontWeight = FontWeight.Bold)
             LazyRow(
+                modifier = Modifier.selectableGroup(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(4.dp)
             ) {
-                items(colors, key = { it }) { hex ->
-                    AvatarColorSwatch(hex, selected.equals(hex, ignoreCase = true), onSelect)
+                itemsIndexed(colors, key = { _, hex -> hex }) { index, hex ->
+                    AvatarColorSwatch(
+                        hex = hex,
+                        isSelected = selected.equals(hex, ignoreCase = true),
+                        position = index + 1,
+                        total = colors.size,
+                        onSelect = onSelect
+                    )
                 }
             }
         }
@@ -873,16 +932,18 @@ private fun ColorChoiceSection(
 private fun AvatarColorSwatch(
     hex: String,
     isSelected: Boolean,
+    position: Int,
+    total: Int,
     onSelect: (String) -> Unit
 ) {
-    val description = stringResource(R.string.avatar_color_option, hex)
+    val description = stringResource(R.string.avatar_color_option_position, position, total)
     Box(
         modifier = Modifier
             .size(48.dp)
             .background(Color(hex.toColorInt()), CircleShape)
             .border(
                 width = if (isSelected) 4.dp else 1.dp,
-                color = if (isSelected) NeoButton else NeoElement,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
                 shape = CircleShape
             )
             .semantics {
@@ -896,7 +957,20 @@ private fun AvatarColorSwatch(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (isSelected) Text("\u2713", color = Color.White, fontWeight = FontWeight.Black)
+        if (isSelected) {
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "\u2713",
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontWeight = FontWeight.Black
+                )
+            }
+        }
     }
 }
 
@@ -955,14 +1029,19 @@ fun MoreScreen(contentPadding: PaddingValues, onNavigate: (MvpPage) -> Unit) {
 @Composable
 private fun MoreCard(@StringRes title: Int, @StringRes description: Int, onClick: () -> Unit) {
     NeomorphicCard(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+        modifier = Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick)
     ) {
         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
             Text(stringResource(title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(stringResource(description), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text("›", style = MaterialTheme.typography.headlineMedium, color = NeoButton)
+            Text(
+                "›",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clearAndSetSemantics { }
+            )
         }
     }
 }
@@ -1142,7 +1221,7 @@ fun StoreScreen(
                     )
                     Text(
                         "◇ ${state.coins}",
-                        color = NeoButton,
+                        color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Black
                     )
@@ -1202,7 +1281,7 @@ private fun StoreBundleCard(
                     )
                     Text(
                         "◇ ${bundle.price}",
-                        color = NeoButton,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Black
                     )
                 }
@@ -1217,7 +1296,7 @@ private fun StoreBundleCard(
                     Text(
                         stringResource(R.string.store_owned),
                         modifier = Modifier.weight(1f),
-                        color = NeoButton,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                     NeomorphicButton(onClick = onEquip) {
@@ -1253,6 +1332,8 @@ fun SettingsScreen(
     state: MvpState,
     contentPadding: PaddingValues,
     onBack: () -> Unit,
+    themeMode: AppThemeMode,
+    onThemeModeChange: (AppThemeMode) -> Unit,
     onSoundChange: (Boolean) -> Unit,
     onVibrationChange: (Boolean) -> Unit
 ) {
@@ -1265,11 +1346,61 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         BackHeader(R.string.settings, onBack)
-        Text(stringResource(R.string.preferences), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.appearance),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.semantics { heading() }
+        )
+        NeomorphicCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    stringResource(R.string.app_theme),
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    stringResource(R.string.app_theme_description),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Column(
+                    modifier = Modifier.fillMaxWidth().selectableGroup(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    AppThemeMode.entries.forEach { mode ->
+                        NeomorphicChoice(
+                            selected = themeMode == mode,
+                            onClick = { onThemeModeChange(mode) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                themeModeLabel(mode),
+                                fontWeight = if (themeMode == mode) {
+                                    FontWeight.Bold
+                                } else {
+                                    FontWeight.Medium
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        Text(
+            stringResource(R.string.preferences),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.semantics { heading() }
+        )
         NeomorphicCard(modifier = Modifier.fillMaxWidth()) {
             Column {
                 SettingRow(stringResource(R.string.sound), state.soundEnabled, onSoundChange)
-                Box(Modifier.fillMaxWidth().height(2.dp).padding(horizontal = 16.dp).background(NeoElement))
+                Box(Modifier.fillMaxWidth().height(2.dp).padding(horizontal = 16.dp).background(MaterialTheme.colorScheme.secondaryContainer))
                 SettingRow(stringResource(R.string.vibration), state.vibrationEnabled, onVibrationChange)
             }
         }
@@ -1279,10 +1410,27 @@ fun SettingsScreen(
 }
 
 @Composable
+private fun themeModeLabel(mode: AppThemeMode): String = stringResource(
+    when (mode) {
+        AppThemeMode.SYSTEM -> R.string.theme_system
+        AppThemeMode.LIGHT -> R.string.theme_light
+        AppThemeMode.DARK -> R.string.theme_dark
+    }
+)
+
+@Composable
 private fun SettingRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
-        NeomorphicSwitch(checked = checked, onCheckedChange = onCheckedChange)
+        Text(
+            label,
+            modifier = Modifier.weight(1f).clearAndSetSemantics { },
+            fontWeight = FontWeight.Bold
+        )
+        NeomorphicSwitch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            contentDescription = label
+        )
     }
 }
 
@@ -1291,26 +1439,39 @@ private fun BackHeader(@StringRes title: Int, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         NeomorphicButton(
             onClick = onBack,
-            backgroundColor = NeoBackground,
-            contentColor = NeoButton,
+            backgroundColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.primary,
             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
         ) { Text(stringResource(R.string.back), fontWeight = FontWeight.Bold) }
         Spacer(Modifier.width(8.dp))
-        Text(stringResource(title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
+        Text(
+            stringResource(title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier.semantics { heading() }
+        )
     }
 }
 
 @Composable
 private fun ScreenHeading(@StringRes title: Int, @StringRes description: Int) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+        Text(
+            stringResource(title),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier.semantics { heading() }
+        )
         Text(stringResource(description), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun CategorySelector(selected: GoalCategory, onSelect: (GoalCategory) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(
+        modifier = Modifier.selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         GoalCategory.entries.forEach { category ->
             NeomorphicChoice(
                 selected = category == selected,

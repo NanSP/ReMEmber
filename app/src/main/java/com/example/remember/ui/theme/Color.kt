@@ -20,3 +20,13 @@ val NeoButton = Color(0xFF143C5C)
 val NeoLightShadow = Color(0xFFF5F7FF)
 val NeoDarkShadow = Color(0xFFA5B2D6)
 val NeoText = NeoButton
+
+val NeoDarkBackground = Color(0xFF111827)
+val NeoDarkSurface = Color(0xFF1B263B)
+val NeoDarkElement = Color(0xFF293A57)
+val NeoDarkPrimary = Color(0xFFA9CFF2)
+val NeoDarkOnPrimary = Color(0xFF0B2438)
+val NeoDarkText = Color(0xFFE8F0FF)
+val NeoDarkOutline = Color(0xFF91A7CD)
+val NeoDarkLightShadow = Color(0xFF344766)
+val NeoDarkDarkShadow = Color(0xFF070B12)
